@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <!-- Cadence logo 1b ("Renewal ring"), small-size version from Logo.dc.html -->
+  <rect width="120" height="120" rx="27" fill="#050505"/>
+  <path d="M60 28 A32 32 0 1 1 32 44" fill="none" stroke="#F5F5F4" stroke-width="15" stroke-linecap="round"/>
+  <circle cx="44" cy="31" r="9" fill="#F2A65A"/>
+</svg>

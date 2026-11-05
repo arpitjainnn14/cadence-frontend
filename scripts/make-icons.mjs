@@ -1,49 +1,59 @@
-// Generates the PWA icons (the off-white Cadence mark on the app's near-black background)
-// without any image library: we rasterise the shape ourselves and write PNGs
-// with Node's built-in zlib. Run with `npm run icons`.
+// Generates the PWA icons from the Cadence logo, direction 1b ("Renewal ring")
+// in Logo.dc.html: an almost-closed ring (a billing cycle) on near-black, with an
+// amber dot in the gap for the next renewal. No image library: we rasterise the
+// shapes ourselves (with 4x4 supersampling) and write PNGs with Node's zlib.
+// Run with `npm run icons`.
 import { deflateSync } from "node:zlib";
 import { mkdirSync, writeFileSync } from "node:fs";
 
-const BG = [0x0b, 0x0b, 0x0c];
-const FG = [0xf5, 0xf5, 0xf4];
+const BG = [0x05, 0x05, 0x05]; // #050505
+const RING = [0xf5, 0xf5, 0xf4]; // #F5F5F4
+const DOT = [0xf2, 0xa6, 0x5a]; // #F2A65A, the app's "due soon" amber
 
-// Is point (x, y) in a unit square [-1, 1] inside the Cadence mark?
-// The mark: an open ring (a billing cycle) with one dot (the beat) in its gap,
-// the same shape as AppMark in src/brand.tsx.
-function inMark(x, y) {
-  const r = 0.42; // ring radius
-  const w = 0.16; // stroke width
-  const d = Math.hypot(x, y);
-  let a = (Math.atan2(y, x) * 180) / Math.PI; // 0° = right, y points down
-  if (a < 0) a += 360;
-  const inGap = a < 45 || a > 315; // the opening on the right
-  if (!inGap && Math.abs(d - r) <= w / 2) return true;
-  // rounded ends of the stroke
-  for (const deg of [45, 315]) {
-    const ex = r * Math.cos((deg * Math.PI) / 180);
-    const ey = r * Math.sin((deg * Math.PI) / 180);
-    if (Math.hypot(x - ex, y - ey) <= w / 2) return true;
-  }
-  // the beat
-  return Math.hypot(x - 0.56, y) <= 0.1;
+// Shapes in the design's 120x120 space, copied from the SVGs in Logo.dc.html.
+// "regular" is the app icon; "small" is the design's thicker version for tiny
+// sizes like the favicon.
+//   regular ring: <path d="M60 30 A30 30 0 1 1 33.5 46" stroke-width="11">, dot (44, 33.5) r7
+//   small ring:   <path d="M60 28 A32 32 0 1 1 32 44"   stroke-width="15">, dot (44, 31)   r9
+const VARIANTS = {
+  regular: { r: 30, width: 11, start: { x: 60, y: 30 }, end: { x: 33.5, y: 46 }, dot: { x: 44, y: 33.5, r: 7 } },
+  small: { r: 32, width: 15, start: { x: 60, y: 28 }, end: { x: 32, y: 44 }, dot: { x: 44, y: 31, r: 9 } },
+};
+const C = 60; // ring centre
+
+function painter(v) {
+  // The arc runs clockwise (y points down) from the top (270°) round to `end`
+  // (about 208°), leaving a gap in the top-left where the dot sits.
+  const endDeg = (Math.atan2(v.end.y - C, v.end.x - C) * 180) / Math.PI + 360;
+  const half = v.width / 2;
+  return (x, y) => {
+    if (Math.hypot(x - v.dot.x, y - v.dot.y) <= v.dot.r) return DOT;
+    let a = (Math.atan2(y - C, x - C) * 180) / Math.PI;
+    if (a < 0) a += 360;
+    const onArc = !(a > endDeg && a < 270);
+    if (onArc && Math.abs(Math.hypot(x - C, y - C) - v.r) <= half) return RING;
+    for (const p of [v.start, v.end]) if (Math.hypot(x - p.x, y - p.y) <= half) return RING; // round caps
+    return BG;
+  };
 }
 
-function render(size) {
-  const ss = 4; // supersampling for smooth edges
+// Full-bleed square: iOS and Android apply their own rounded mask. The mark
+// sits well inside the 80% "safe zone", so the same art works as maskable.
+function render(size, variant = "regular") {
+  const paint = painter(VARIANTS[variant]);
+  const ss = 4;
   const px = Buffer.alloc(size * size * 3);
   for (let j = 0; j < size; j++) {
     for (let i = 0; i < size; i++) {
-      let hits = 0;
+      const sum = [0, 0, 0];
       for (let sj = 0; sj < ss; sj++) {
         for (let si = 0; si < ss; si++) {
-          const x = ((i + (si + 0.5) / ss) / size) * 2 - 1;
-          const y = ((j + (sj + 0.5) / ss) / size) * 2 - 1;
-          if (inMark(x + 0.08, y)) hits++; // +0.08 centres the ring + dot visually
+          const col = paint(((i + (si + 0.5) / ss) / size) * 120, ((j + (sj + 0.5) / ss) / size) * 120);
+          for (let c = 0; c < 3; c++) sum[c] += col[c];
         }
       }
-      const t = hits / (ss * ss);
       const o = (j * size + i) * 3;
-      for (let c = 0; c < 3; c++) px[o + c] = Math.round(BG[c] + (FG[c] - BG[c]) * t);
+      for (let c = 0; c < 3; c++) px[o + c] = Math.round(sum[c] / (ss * ss));
     }
   }
   return png(size, px);
@@ -86,4 +96,5 @@ mkdirSync("public/icons", { recursive: true });
 writeFileSync("public/icons/icon-192.png", render(192));
 writeFileSync("public/icons/icon-512.png", render(512));
 writeFileSync("public/icons/apple-touch-icon.png", render(180));
+writeFileSync("public/icons/favicon-32.png", render(32, "small")); // PNG fallback; public/favicon.svg is the main favicon
 console.log("Wrote public/icons/*.png");

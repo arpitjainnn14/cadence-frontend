@@ -172,7 +172,7 @@ function Sidebar() {
   return (
     <aside className="flex h-full w-[248px] flex-none flex-col gap-6 border-r border-hair px-3.5 pt-6 pb-[18px]">
       <div className="flex items-center gap-2.5 px-2">
-        <AppTile size={30} radius={9} />
+        <AppTile size={30} />
         <span className="text-[17px] font-bold tracking-[-0.03em]">{APP_NAME}</span>
       </div>
 

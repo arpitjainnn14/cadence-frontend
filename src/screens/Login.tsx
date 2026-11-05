@@ -31,7 +31,7 @@ export function Login() {
     >
       <div className="flex w-full max-w-[340px] flex-col gap-9">
         <div className="flex flex-col items-center gap-[18px] text-center">
-          <AppTile size={60} radius={17} className="shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6)]" />
+          <AppTile size={60} className="rounded-[13.5px] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6)]" />
           <div className="flex flex-col gap-1.5">
             <h1 className="m-0 text-[28px] font-bold tracking-[-0.035em]">Sign in to {APP_NAME}</h1>
             <p className="m-0 text-[15px] text-fg2">{TAGLINE}</p>
