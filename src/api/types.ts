@@ -1,0 +1,108 @@
+// TypeScript mirror of the backend API contract (FRONTEND_CONTEXT.md §5).
+// Money is always a decimal string like "649.00"; dates are "YYYY-MM-DD".
+// There is no ₹/$ conversion: ₹ totals cover ₹ subscriptions only, and $ ones
+// are totalled separately in $.
+
+export type Currency = "INR" | "USD";
+export type BillingCycle = "monthly" | "quarterly" | "half_yearly" | "yearly";
+export type Status = "active" | "paused" | "cancelled";
+export type PaymentType = "credit_card" | "upi" | "other";
+export type Network = "visa" | "mastercard" | "rupay" | null;
+
+export const CATEGORIES = [
+  "Streaming",
+  "Music",
+  "Software/AI",
+  "Cloud storage",
+  "Fitness",
+  "Food delivery",
+  "Shopping",
+  "News",
+  "Other",
+] as const;
+export type Category = (typeof CATEGORIES)[number];
+
+export interface Me {
+  email: string;
+}
+
+export interface PaymentMethod {
+  id: string;
+  type: PaymentType;
+  bank: string | null;
+  name: string;
+  network: Network;
+  display_name: string;
+  has_image: boolean;
+  is_active: boolean;
+  /** "#RRGGBB" chosen in Add card, or null = the frontend picks a colour. */
+  color: string | null;
+}
+
+export interface MerchantResolve {
+  domain: string | null;
+  logo_url: string | null;
+}
+
+export interface SubscriptionIn {
+  merchant_name: string;
+  merchant_domain?: string | null;
+  amount: string;
+  currency: Currency;
+  billing_cycle: BillingCycle;
+  start_date: string;
+  payment_method_id?: string | null;
+  category: Category;
+  notes?: string | null;
+  status: Status;
+}
+
+export interface Subscription extends SubscriptionIn {
+  id: string;
+  next_renewal: string;
+  logo_url: string | null;
+  /** Yearly cost in the subscription's own currency. */
+  yearly_amount: string;
+  /** Null for $ subscriptions (no conversion). For ₹ ones they equal amount / yearly_amount. */
+  amount_inr: string | null;
+  yearly_inr: string | null;
+  cancelled_at: string | null;
+  created_at: string;
+}
+
+export interface UpcomingRenewal {
+  subscription_id: string;
+  merchant_name: string;
+  logo_url: string | null;
+  amount: string;
+  currency: Currency;
+  /** Null for $ subscriptions: show `amount` with `currency`. */
+  amount_inr: string | null;
+  renewal_date: string;
+  days_until: number;
+  payment_method: { id: string; name: string; has_image: boolean } | null;
+}
+
+export interface Summary {
+  monthly: string;
+  half_yearly: string;
+  yearly: string;
+  /** Totals of the $ subscriptions, in $; null when there are none. */
+  usd: { monthly: string; half_yearly: string; yearly: string } | null;
+  upcoming: UpcomingRenewal[];
+}
+
+export type Period = "monthly" | "yearly";
+
+/** Charts and most_expensive cover ₹ subscriptions only; $ ones are listed in usd_subscriptions. */
+export interface Insights {
+  by_category: { category: Category; amount: string; subscription_ids: string[] }[];
+  by_payment_method: {
+    payment_method_id: string | null;
+    name: string;
+    amount: string;
+    subscription_ids: string[];
+  }[];
+  most_expensive: { subscription_id: string; merchant_name: string; yearly_inr: string }[];
+  usd_subscriptions: { subscription_id: string; merchant_name: string; yearly_amount: string }[];
+}
