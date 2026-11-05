@@ -47,9 +47,12 @@
   --animate-settle: settle 0.42s cubic-bezier(0.3, 1.2, 0.4, 1);
   --animate-rise: rise 0.4s var(--ease-spring);
 
+  /* Screens fade in without sliding. The design slid them up 10px, but on
+     iPhone Safari text that moves while fading is painted at low quality and
+     can stay soft afterwards, which made small grey text look blurry. */
   @keyframes screenIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: none; }
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
   @keyframes fadeIn {
     from { opacity: 0; }

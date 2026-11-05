@@ -5,7 +5,8 @@ export function ScreenHeader({ eyebrow, title, right }: { eyebrow: ReactNode; ti
   return (
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div className="flex flex-col gap-0.5">
-        <span className="text-[13px] font-medium text-fg2">{eyebrow}</span>
+        {/* A little stronger than the design's fg2 grey, which read as faded on phones. */}
+        <span className="text-[13px] font-medium text-fg/70">{eyebrow}</span>
         <h1 className="m-0 text-[32px] leading-[1.15] font-bold tracking-[-0.035em]">{title}</h1>
       </div>
       {right}
