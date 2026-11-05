@@ -47,7 +47,7 @@ public/
 - **No tokens in JavaScript.** The backend keeps login in httpOnly cookies, which an XSS bug can't read. We never use localStorage or sessionStorage for auth.
 - **CSRF header.** Every POST/PUT/PATCH/DELETE copies the readable `csrf_token` cookie into `X-CSRF-Token`. Another website can make your browser send cookies, but it can't read them, so it can't forge that header.
 - **Single-flight refresh.** When several requests get a 401 at once, they all wait on one `/api/auth/refresh` call. The backend rotates refresh tokens, and a second parallel refresh would look like token theft. This behaviour is tested in `src/api/client.test.ts`.
-- **Same origin.** In production, `vercel.json` rewrites `/api/*` to Cloud Run, so cookies are first-party (which iOS Safari needs). Never call the Cloud Run URL directly. Before deploying, replace `CLOUD_RUN_URL` in `vercel.json`.
+- **Same origin.** In production, `vercel.json` rewrites `/api/*` to the backend (currently the Vercel project `https://cadence-api-olive.vercel.app`; Cloud Run may replace it later, which only means changing that one URL). The browser only ever talks to `cadence.arpitjain.me`, so cookies are first-party (which iOS Safari needs). Never call the backend URL directly from the app.
 - **Filtering on the client.** The Subscriptions screen fetches everything once and filters and sorts in the browser. That way every tab can show its count and switching is instant.
 - **No chart library.** Each donut slice is one SVG circle with a dash pattern, which is tiny and animates smoothly.
 - **Push on iPhone.** Notifications only work once Cadence is installed to the Home Screen. Settings detects when it isn't and explains what to do.

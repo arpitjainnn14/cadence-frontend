@@ -1,6 +1,6 @@
 {
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://CLOUD_RUN_URL/api/:path*" },
+    { "source": "/api/:path*", "destination": "https://cadence-api-olive.vercel.app/api/:path*" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
   "headers": [
