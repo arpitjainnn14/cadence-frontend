@@ -6,9 +6,8 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { AddCardSheet } from "../screens/AddCardSheet";
 import { SubscriptionSheet } from "../screens/SubscriptionSheet";
 import { Toast } from "../components/Toast";
-import { CardIcon, GearIcon, HomeIcon, ListIcon, LogoutIcon, PieIcon, PlusIcon } from "../components/Icons";
+import { CardIcon, GearIcon, HomeIcon, ListIcon, LogoutIcon, PieIcon, PlusIcon, ThemeIcon } from "../components/Icons";
 import { useLogout, useMe } from "../data/queries";
-import { Toggle } from "../components/Toggle";
 import { useTheme } from "../ui/theme";
 import { useUi } from "../ui/UiContext";
 import { useIsDesktop } from "../ui/useIsDesktop";
@@ -174,6 +173,16 @@ function Sidebar() {
       <div className="flex items-center gap-2.5 px-2">
         <AppTile size={30} />
         <span className="text-[17px] font-bold tracking-[-0.03em]">{APP_NAME}</span>
+        {/* Appearance: the design's round half-circle button (same as on the phone Home screen). */}
+        <button
+          type="button"
+          onClick={toggleTheme}
+          aria-label={dark ? "Switch to light appearance" : "Switch to dark appearance"}
+          title={dark ? "Switch to light appearance" : "Switch to dark appearance"}
+          className="ml-auto grid h-8 w-8 place-items-center rounded-full border-none bg-s2 text-fg2 shadow-lift transition-[color,transform] duration-200 hover:text-fg active:scale-[0.92]"
+        >
+          <ThemeIcon size={16} style={{ transform: dark ? "none" : "rotate(180deg)", transition: "transform .45s cubic-bezier(.3,1.3,.4,1)" }} />
+        </button>
       </div>
 
       <nav aria-label="Main" className="relative flex flex-col gap-0.5">
@@ -207,16 +216,6 @@ function Sidebar() {
       </button>
 
       <div className="flex-1" />
-
-      <button
-        type="button"
-        onClick={toggleTheme}
-        aria-pressed={dark}
-        className="flex h-10 items-center justify-between rounded-[10px] border-none bg-transparent px-3 text-sm text-fg2"
-      >
-        <span>Dark appearance</span>
-        <Toggle on={dark} />
-      </button>
 
       <div className="flex items-center gap-2.5 border-t border-hair px-2 pt-3.5">
         <div className="grid h-8 w-8 place-items-center rounded-full bg-s3 text-xs font-semibold text-fg2 uppercase">
