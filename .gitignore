@@ -25,3 +25,8 @@ pnpm-debug.log*
 .idea
 .vscode/*
 !.vscode/extensions.json
+
+# Added by `vercel link`. Keep the exception after it: the last matching rule
+# wins, and .env.development (mock switch only, no secrets) must stay tracked.
+.env*
+!.env.development
