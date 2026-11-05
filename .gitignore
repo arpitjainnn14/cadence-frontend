@@ -1,0 +1,27 @@
+# Dependencies and build output
+node_modules
+dist
+*.tsbuildinfo
+coverage
+
+# Environment files. .env.development IS committed on purpose: it only
+# switches the mock API on. Anything else (or *.local) stays on your machine.
+# Never put secrets in a VITE_ variable: they end up in the public bundle.
+.env
+.env.*
+!.env.development
+*.local
+
+# Vercel CLI link info (`vercel link` creates this)
+.vercel
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS / editor
+.DS_Store
+.idea
+.vscode/*
+!.vscode/extensions.json
