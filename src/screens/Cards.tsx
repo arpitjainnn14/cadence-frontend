@@ -6,6 +6,7 @@ import { LoadError, Loading, ScreenHeader, SectionTitle } from "../components/Sc
 import { usePaymentLabels, usePaymentMethods, useSubscriptions } from "../data/queries";
 import { cardLook } from "../lib/cardStyle";
 import { dualText, usageOf } from "../lib/money";
+import { plural } from "../lib/format";
 import { useUi } from "../ui/UiContext";
 import { useIsDesktop } from "../ui/useIsDesktop";
 import { useWidth } from "../ui/useWidth";
@@ -25,7 +26,7 @@ export function Cards() {
 
   const header = (
     <ScreenHeader
-      eyebrow={pms.data ? `${cards.length} cards · ${upis.length} UPI apps` : " "}
+      eyebrow={pms.data ? `${plural(cards.length, "card", "cards")} · ${plural(upis.length, "UPI app", "UPI apps")}` : " "}
       title="Cards"
       right={
         <button

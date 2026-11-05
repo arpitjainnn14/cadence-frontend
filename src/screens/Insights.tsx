@@ -43,15 +43,15 @@ export function Insights() {
   );
 
   if (insights.isError || subs.isError)
-    return <div className="flex flex-col gap-[18px]">{header}<LoadError onRetry={() => (insights.refetch(), subs.refetch())} /></div>;
-  if (!subs.data) return <div className="flex flex-col gap-[18px]">{header}<Loading /></div>;
-  if (subs.data.length === 0) return <div className="flex flex-col gap-[18px]">{header}<EmptyState /></div>;
+    return <div className="flex max-w-[720px] flex-col gap-[18px]">{header}<LoadError onRetry={() => (insights.refetch(), subs.refetch())} /></div>;
+  if (!subs.data) return <div className="flex max-w-[720px] flex-col gap-[18px]">{header}<Loading /></div>;
+  if (subs.data.length === 0) return <div className="flex max-w-[720px] flex-col gap-[18px]">{header}<EmptyState /></div>;
 
   const subById = new Map(subs.data.map((s) => [s.id, s]));
   const d = insights.data;
 
   return (
-    <div className="flex animate-screen-in flex-col gap-[18px]">
+    <div className="flex max-w-[720px] animate-screen-in flex-col gap-[18px]">
       {header}
       <Segmented<View>
         className="w-full max-w-[720px]"
@@ -71,7 +71,7 @@ export function Insights() {
             key="cat"
             title="By category"
             period={period}
-            unit="categories"
+            unit={["category", "categories"]}
             subById={subById}
             groups={d.by_category.map((c) => ({
               slice: { key: c.category, label: c.category, value: toNum(c.amount), color: CATEGORY_COLOR[c.category] },
@@ -83,7 +83,7 @@ export function Insights() {
             key="pay"
             title="By card or UPI"
             period={period}
-            unit="methods"
+            unit={["method", "methods"]}
             subById={subById}
             groups={d.by_payment_method.map((p, i) => ({
               slice: {
@@ -109,7 +109,8 @@ export function Insights() {
 interface DonutCardProps {
   title: string;
   period: Period;
-  unit: string;
+  /** [singular, plural], e.g. ["category", "categories"]. */
+  unit: [string, string];
   groups: { slice: Slice; ids: string[] }[];
   subById: Map<string, Subscription>;
 }
@@ -142,7 +143,7 @@ function DonutCard({ title, period, unit, groups, subById }: DonutCardProps) {
           onSelect={toggle}
           onHover={setHover}
           centerLabel={period === "yearly" ? "Per year" : "Per month"}
-          centerSub={`${slices.length} ${unit}`}
+          centerSub={`${slices.length} ${unit[slices.length === 1 ? 0 : 1]}`}
         />
         <div className="flex flex-[1_1_210px] flex-col">
           {slices.map((x) => (

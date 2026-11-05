@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { groupINR, inr, price, relDays, shortDate, usd } from "./format";
+import { groupINR, inr, plural, price, relDays, shortDate, usd } from "./format";
 import { nextRenewal } from "./cycles";
 
 describe("money", () => {
@@ -42,5 +42,13 @@ describe("nextRenewal", () => {
   });
   it("clamps to the end of short months", () => {
     expect(nextRenewal("2026-01-31", "monthly", new Date(2026, 1, 1))).toBe("2026-02-28");
+  });
+});
+
+describe("plural", () => {
+  it("uses the singular only for exactly one", () => {
+    expect(plural(1, "card", "cards")).toBe("1 card");
+    expect(plural(0, "card", "cards")).toBe("0 cards");
+    expect(plural(11, "card", "cards")).toBe("11 cards");
   });
 });

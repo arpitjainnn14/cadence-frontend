@@ -1,6 +1,10 @@
 // Drawn credit card / UPI card from CardArt.dc.html ("gradient" variant).
 // Sizes use container-query units (cqw) so the card scales with its width,
-// exactly like the design. If the card has uploaded art, that's shown instead.
+// exactly like the design.
+//
+// If the card has uploaded art, we show ONLY that art (plus the spend badge):
+// real card art already has its own bank name, chip and network logo, so
+// drawing ours on top would print everything twice.
 import type { CSSProperties } from "react";
 import type { CardLook } from "../lib/cardStyle";
 
@@ -15,7 +19,8 @@ export function CardArt({ look, badge, selected }: Props) {
   const upi = look.kind === "upi";
   const hasImage = !!look.image;
   return (
-    <div className="w-full" style={{ containerType: "inline-size" }}>
+    // text-left: cards often sit inside a <button>, which centres text by default.
+    <div className="w-full text-left" style={{ containerType: "inline-size" }}>
       <div
         className="relative w-full overflow-hidden"
         style={{
@@ -30,15 +35,43 @@ export function CardArt({ look, badge, selected }: Props) {
           transition: "outline-color .2s",
         }}
       >
-        {hasImage && (
+        {hasImage ? (
           <>
             <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url("${look.image}")` }} />
-            <div
-              className="absolute inset-0"
-              style={{ background: "linear-gradient(180deg,rgba(0,0,0,0.5),rgba(0,0,0,0) 45%,rgba(0,0,0,0.45))" }}
-            />
+            {badge && <Badge text={badge} onImage />}
           </>
+        ) : (
+          <DrawnFace look={look} upi={upi} badge={badge} />
         )}
+      </div>
+    </div>
+  );
+}
+
+/** Spend pill in the top-right corner. On photos it gets a stronger backdrop so it stays readable. */
+function Badge({ text, onImage = false }: { text: string; onImage?: boolean }) {
+  return (
+    <span
+      className="font-semibold whitespace-nowrap tabular-nums"
+      style={{
+        ...(onImage ? { position: "absolute", top: "6.4cqw", right: "7cqw", color: "#fff" } : {}),
+        fontSize: "4.2cqw",
+        padding: "1.2cqw 2.6cqw",
+        borderRadius: 99,
+        background: onImage ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0.24)",
+        backdropFilter: onImage ? "blur(6px)" : undefined,
+        WebkitBackdropFilter: onImage ? "blur(6px)" : undefined,
+      }}
+    >
+      {text}
+    </span>
+  );
+}
+
+/** The design's drawn card: sheen, rings, bank and product name, chip and network mark. */
+function DrawnFace({ look, upi, badge }: { look: CardLook; upi: boolean; badge?: string }) {
+  return (
+    <>
         {/* soft light from the top-left */}
         <div
           className="absolute inset-0"
@@ -68,14 +101,7 @@ export function CardArt({ look, badge, selected }: Props) {
               </span>
             )}
           </div>
-          {badge && (
-            <span
-              className="font-semibold whitespace-nowrap tabular-nums"
-              style={{ fontSize: "4.2cqw", padding: "1.2cqw 2.6cqw", borderRadius: 99, background: "rgba(0,0,0,0.24)" }}
-            >
-              {badge}
-            </span>
-          )}
+          {badge && <Badge text={badge} />}
         </div>
 
         {/* EMV chip */}
@@ -98,8 +124,7 @@ export function CardArt({ look, badge, selected }: Props) {
         <div className="absolute flex items-end justify-end" style={{ left: "7cqw", right: "7cqw", bottom: "6.4cqw" }}>
           <NetworkMark look={look} />
         </div>
-      </div>
-    </div>
+    </>
   );
 }
 

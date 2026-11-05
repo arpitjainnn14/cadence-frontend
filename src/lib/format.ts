@@ -69,3 +69,6 @@ export function relDays(days: number): string {
 export function longToday(now: Date = today()): string {
   return `${WEEKDAYS[now.getDay()]}, ${now.getDate()} ${MONTHS[now.getMonth()]}`;
 }
+
+/** 1 -> "1 card", 3 -> "3 cards". */
+export const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
