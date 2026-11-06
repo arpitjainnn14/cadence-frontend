@@ -12,7 +12,7 @@ import { enablePush, pushStatus, type PushResult } from "../lib/push";
 import { Segmented } from "../components/Segmented";
 import { setTheme, useTheme, type Theme } from "../ui/theme";
 import { useUi } from "../ui/UiContext";
-import { APP_NAME } from "../brand";
+import { APP_NAME, AppTile, TAGLINE } from "../brand";
 import { MadeBy } from "../components/MadeBy";
 
 export function Settings() {
@@ -24,7 +24,13 @@ export function Settings() {
       <NotificationsSection />
       <PasswordSection />
       <AccountSection />
-      <MadeBy className="pt-4" />
+      {/* About: logo, name and tagline above the credit. */}
+      <div className="flex flex-col items-center gap-2 pt-6">
+        <AppTile size={44} className="shadow-lift rounded-[10px]" />
+        <span className="text-[15px] font-bold tracking-[-0.02em]">{APP_NAME}</span>
+        <span className="text-[12.5px] text-fg2">{TAGLINE}</span>
+        <MadeBy className="pt-1" />
+      </div>
     </div>
   );
 }

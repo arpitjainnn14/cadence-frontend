@@ -13,6 +13,7 @@ import { longToday, toNum } from "../lib/format";
 import { dualText, usageOf } from "../lib/money";
 import { useUi } from "../ui/UiContext";
 import { useIsDesktop } from "../ui/useIsDesktop";
+import { APP_NAME, AppTile } from "../brand";
 
 export function Home() {
   const summary = useSummary();
@@ -30,7 +31,19 @@ export function Home() {
   const roundBtn = "relative grid h-[38px] w-[38px] place-items-center rounded-[19px] border-none bg-s2 text-fg";
   const header = (
     <ScreenHeader
-      eyebrow={longToday()}
+      eyebrow={
+        // Phones have no sidebar, so Home carries the app's name next to the date.
+        desk ? (
+          longToday()
+        ) : (
+          <span className="inline-flex items-center gap-1.5">
+            <AppTile size={16} />
+            <span className="font-semibold text-fg">{APP_NAME}</span>
+            <span aria-hidden>·</span>
+            {longToday()}
+          </span>
+        )
+      }
       title="Home"
       right={
         !desk && (
