@@ -53,4 +53,11 @@ describe("drawn card text", () => {
     const unknown = cardLook({ ...pm("z", "Some Bank Card", "visa"), bank: "Some Bank", name: "Card" });
     expect(unknown.bg).toMatch(/^color-mix\(in oklab, #[0-9A-F]{6} 38%, #ffffff\)$/);
   });
+
+  it("puts the issuing bank on top of a co-branded card (Axis Bank, then Scapia)", () => {
+    const look = cardLook({ ...pm("s", "Axis Scapia", "rupay"), bank: "Axis", name: "Scapia" });
+    expect(look.bank).toBe("Axis Bank");
+    expect(look.name).toBe("Scapia");
+    expect(look.lowercase).toBeFalsy();
+  });
 });

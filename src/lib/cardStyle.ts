@@ -18,7 +18,7 @@ export interface CardLook {
   ink: string;
   /** Second line, badge and amount colour. */
   sub: string;
-  /** Brand quirks of the wordmark, e.g. "scapia" in lowercase, ICICI in italics. */
+  /** Brand quirks of the wordmark, e.g. "slice" in lowercase, ICICI in italics. */
   lowercase?: boolean;
   italic?: boolean;
 }
@@ -34,8 +34,8 @@ const PASTELS: Record<string, Pastel> = {
   "amazon pay icici": { bg: "#f6d59a", ink: "#232f3e", sub: "#8a5f17", lowercase: true },
   "icici coral": { bg: "#f4b9a8", ink: "#8f2a1c", sub: "#9a4a38", italic: true },
   "sbi card cashback": { bg: "#c2b9f0", ink: "#2b2a8c", sub: "#544aa3" },
-  "axis scapia|mastercard": { bg: "#a6dccd", ink: "#0f5248", sub: "#2c7366", lowercase: true },
-  "axis scapia|rupay": { bg: "#bfdcaa", ink: "#2c4f1d", sub: "#4a7236", lowercase: true },
+  "axis scapia|mastercard": { bg: "#a6dccd", ink: "#0f5248", sub: "#2c7366" },
+  "axis scapia|rupay": { bg: "#bfdcaa", ink: "#2c4f1d", sub: "#4a7236" },
   slice: { bg: "#d1b9f8", ink: "#4a1aa8", sub: "#6a46b8", lowercase: true },
   "idfc first millennia": { bg: "#f2b1b8", ink: "#8a1622", sub: "#9a3a45" },
   "bobcard select": { bg: "#f6c6a5", ink: "#9a3f0c", sub: "#a35a2c" },
@@ -60,8 +60,6 @@ export function pastelOf(color: string): Pastel {
 const PRESETS: Record<string, Preset> = {
   // Co-branded cards: the design puts the brand on top and the issuer underneath.
   "amazon pay icici": { bank: "Amazon Pay", name: "ICICI Bank" },
-  "axis scapia|mastercard": { bank: "Scapia", name: "Axis Bank" },
-  "axis scapia|rupay": { bank: "Scapia", name: "Axis Bank" },
   slice: { bank: "slice", name: "Super card" },
   // UPI apps: the wordmark is the brand alone ("UPI AutoPay" is the second line).
   "cred upi": { bank: "CRED" },
@@ -72,6 +70,7 @@ const PRESETS: Record<string, Preset> = {
 // name the way it's printed on the card, as in the design.
 const BANK_ON_CARD: Record<string, string> = {
   hdfc: "HDFC Bank",
+  axis: "Axis Bank",
   icici: "ICICI Bank",
   sbi: "SBI Card",
   "idfc first": "IDFC FIRST",
