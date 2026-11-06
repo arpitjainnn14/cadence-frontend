@@ -31,7 +31,7 @@ const PASTELS: Record<string, Pastel> = {
   "hdfc bank moneyback+": { bg: "#b3c6f2", ink: "#123f8c", sub: "#3a5a9c" },
   "icici sapphiro|visa": { bg: "#c3cddd", ink: "#7a1f1f", sub: "#4b5a70", italic: true },
   "icici sapphiro|rupay": { bg: "#cfd3dc", ink: "#7a1f1f", sub: "#525b6b", italic: true },
-  "amazon pay icici": { bg: "#f6d59a", ink: "#232f3e", sub: "#8a5f17", lowercase: true },
+  "amazon pay icici": { bg: "#f6d59a", ink: "#8a2b17", sub: "#8a5f17", italic: true },
   "icici coral": { bg: "#f4b9a8", ink: "#8f2a1c", sub: "#9a4a38", italic: true },
   "sbi card cashback": { bg: "#c2b9f0", ink: "#2b2a8c", sub: "#544aa3" },
   "axis scapia|mastercard": { bg: "#a6dccd", ink: "#0f5248", sub: "#2c7366" },
@@ -58,9 +58,6 @@ export function pastelOf(color: string): Pastel {
 
 // Wordmark and second-line text that differ from the defaults, keyed by lower-cased display_name.
 const PRESETS: Record<string, Preset> = {
-  // Co-branded cards: the design puts the brand on top and the issuer underneath.
-  "amazon pay icici": { bank: "Amazon Pay", name: "ICICI Bank" },
-  slice: { bank: "slice", name: "Super card" },
   // UPI apps: the wordmark is the brand alone ("UPI AutoPay" is the second line).
   "cred upi": { bank: "CRED" },
   "slice upi": { bank: "slice" },
@@ -87,9 +84,11 @@ function hash(s: string): number {
 }
 
 /**
- * The second line on a drawn card. The bank is already on the first line, so
- * don't repeat it: "HDFC" + "HDFC Regalia" shows "Regalia", and a name that is
- * just the bank ("slice" / "slice") shows nothing.
+ * The second line on a drawn card. The bank is already on the first line (the
+ * issuer, also for co-branded cards: ICICI Bank / Amazon Pay, Axis Bank /
+ * Scapia), so don't repeat it: "HDFC Regalia" shows "Regalia", "Amazon Pay
+ * ICICI" shows "Amazon Pay", and a name that is just the bank ("slice") shows
+ * nothing.
  */
 export function cardName(bank: string | null, name: string): string {
   if (!bank) return "";
@@ -97,6 +96,7 @@ export function cardName(bank: string | null, name: string): string {
   const n = name.trim();
   if (n.toLowerCase() === b) return "";
   if (n.toLowerCase().startsWith(b + " ")) return n.slice(b.length).trim();
+  if (n.toLowerCase().endsWith(" " + b)) return n.slice(0, n.length - b.length).trim();
   return n;
 }
 

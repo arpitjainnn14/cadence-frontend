@@ -35,6 +35,7 @@ describe("drawn card text", () => {
     expect(cardName("IDFC FIRST", "Millennia")).toBe("Millennia");
     expect(cardName("Axis", "Axisphere")).toBe("Axisphere"); // only a whole-word prefix
     expect(cardName(null, "Some card")).toBe("");
+    expect(cardName("ICICI", "Amazon Pay ICICI")).toBe("Amazon Pay");
   });
 
   it("is always drawn: no card art, whatever has_image says", () => {
@@ -59,5 +60,12 @@ describe("drawn card text", () => {
     expect(look.bank).toBe("Axis Bank");
     expect(look.name).toBe("Scapia");
     expect(look.lowercase).toBeFalsy();
+  });
+
+  it("shows ICICI Bank / Amazon Pay, and slice with no made-up card name", () => {
+    const amazon = cardLook({ ...pm("a", "Amazon Pay ICICI", "visa"), bank: "ICICI", name: "Amazon Pay ICICI" });
+    expect([amazon.bank, amazon.name]).toEqual(["ICICI Bank", "Amazon Pay"]);
+    const slice = cardLook({ ...pm("s", "slice", "rupay"), bank: "slice", name: "slice" });
+    expect([slice.bank, slice.name]).toEqual(["slice", ""]);
   });
 });
