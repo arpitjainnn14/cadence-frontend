@@ -50,7 +50,9 @@ export function CardArt({ look, badge, selected, slot = 1.586 }: Props) {
               style={{
                 maxWidth: "100cqw",
                 maxHeight: `${100 / slot}cqw`,
-                filter: "drop-shadow(0 12px 18px rgba(0,0,0,0.32)) drop-shadow(0 2px 4px rgba(0,0,0,0.18))",
+                // Shadow in cqw so it scales with the card: soft on big cards,
+                // not a blurry smudge on small thumbnails (e.g. "Paid with").
+                filter: "drop-shadow(0 3.4cqw 5cqw rgba(0,0,0,0.30)) drop-shadow(0 0.6cqw 1.2cqw rgba(0,0,0,0.18))",
               }}
             />
             {badge && <Badge text={badge} onImage />}
