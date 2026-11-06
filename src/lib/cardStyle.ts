@@ -26,18 +26,18 @@ type Preset = Partial<CardLook>;
 
 // Keyed by lower-cased display_name.
 const PRESETS: Record<string, Preset> = {
-  "hdfc moneyback+": { dot: "#E2231A", bg: "linear-gradient(135deg,#2650b0 0%,#163a85 48%,#0b1f52 100%)" },
+  "hdfc bank moneyback+": { dot: "#E2231A", bg: "linear-gradient(135deg,#2650b0 0%,#163a85 48%,#0b1f52 100%)" },
   "icici sapphiro|visa": { dot: "#F37021", bg: "linear-gradient(140deg,#4a6287 0%,#22344f 45%,#0d1522 100%)" },
   "icici sapphiro|rupay": { dot: "#F37021", bg: "linear-gradient(140deg,#5d6b80 0%,#2b3646 48%,#121820 100%)" },
   // Co-branded cards: the design puts the brand on top and the issuer underneath.
-  "icici amazon pay": { bank: "Amazon Pay", name: "ICICI Bank", dot: "#FF9900", bg: "linear-gradient(135deg,#37475a 0%,#1f2a37 50%,#0f151c 100%)" },
+  "amazon pay icici": { bank: "Amazon Pay", name: "ICICI Bank", dot: "#FF9900", bg: "linear-gradient(135deg,#37475a 0%,#1f2a37 50%,#0f151c 100%)" },
   "icici coral": { dot: "#F37021", bg: "linear-gradient(135deg,#ef8a6f 0%,#c4513f 50%,#7a2626 100%)" },
-  "sbi cashback": { dot: "#29A8E0", bg: "linear-gradient(135deg,#5340a0 0%,#2e2165 50%,#160f36 100%)" },
+  "sbi card cashback": { dot: "#29A8E0", bg: "linear-gradient(135deg,#5340a0 0%,#2e2165 50%,#160f36 100%)" },
   "axis scapia|mastercard": { bank: "Scapia", name: "Axis Bank", bg: "linear-gradient(135deg,#1f7a70 0%,#0f4842 52%,#06211f 100%)" },
   "axis scapia|rupay": { bank: "Scapia", name: "Axis Bank", bg: "linear-gradient(135deg,#5b7f45 0%,#2f4a24 52%,#141f10 100%)" },
   slice: { bank: "slice", name: "Super card", bg: "linear-gradient(135deg,#9a5cff 0%,#6024d0 50%,#2c0d6e 100%)" },
   "idfc first millennia": { bg: "linear-gradient(135deg,#b62a35 0%,#7c1420 50%,#3d070e 100%)" },
-  "bob select": { dot: "#F26522", bg: "linear-gradient(135deg,#4a3021 0%,#241610 55%,#0f0907 100%)" },
+  "bobcard select": { dot: "#F26522", bg: "linear-gradient(135deg,#4a3021 0%,#241610 55%,#0f0907 100%)" },
   gpay: { mark: "G", tile: "#FFFFFF", tileFg: "#1A73E8", fg: "#1f1f1f", bg: "linear-gradient(135deg,#ffffff 0%,#e9ecf1 100%)" },
   "google pay": { mark: "G", tile: "#FFFFFF", tileFg: "#1A73E8", fg: "#1f1f1f", bg: "linear-gradient(135deg,#ffffff 0%,#e9ecf1 100%)" },
   phonepe: { mark: "Pe", tile: "#5F259F", tileFg: "#fff", bg: "linear-gradient(135deg,#7b3fd1 0%,#4d1a91 100%)" },
@@ -95,7 +95,8 @@ export const CARD_COLORS = ["#1E3A8A", "#0F4C46", "#5B21B6", "#7F1D1D", "#3F3F46
 export function thumbBg(pm: PaymentMethod | undefined | null): string {
   if (!pm) return "var(--color-s3)";
   const look = cardLook(pm);
-  return look.image ? `center / cover no-repeat url("${look.image}"), #2a2a2e` : look.bg;
+  // Real art is transparent and may be portrait: show it whole, no backdrop.
+  return look.image ? `center / contain no-repeat url("${look.image}")` : look.bg;
 }
 
 export const NETWORK_LABEL: Record<string, string> = { visa: "Visa", mastercard: "Mastercard", rupay: "RuPay" };

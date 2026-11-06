@@ -5,6 +5,13 @@ import type { BillingCycle, Category, Currency, PaymentMethod, Status, Subscript
 import { CYCLES, addMonths, nextRenewal } from "../lib/cycles";
 import { toIso, today } from "../lib/format";
 
+/** Same rule as the backend: "bank name", unless the bank already appears in the name as a whole word. */
+export function displayName(bank: string | null, name: string): string {
+  if (!bank) return name;
+  const esc = bank.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?<!\\w)${esc}(?!\\w)`, "i").test(name) ? name : `${bank} ${name}`;
+}
+
 let seq = 0;
 export const uuid = () => crypto.randomUUID?.() ?? `id-${Date.now()}-${++seq}`;
 
@@ -19,7 +26,7 @@ const pm = (
   bank,
   name,
   network,
-  display_name: bank && bank !== name ? `${bank} ${name}` : name,
+  display_name: displayName(bank, name),
   has_image: false,
   is_active: true,
   color: null,
@@ -28,17 +35,17 @@ const pm = (
 export const db = {
   images: new Map<string, Blob>(),
   paymentMethods: [
-    pm("credit_card", "HDFC", "Moneyback+", "visa"),
+    pm("credit_card", "HDFC Bank", "MoneyBack+", "visa"),
     pm("credit_card", "ICICI", "Sapphiro", "rupay"),
     pm("credit_card", "ICICI", "Sapphiro", "visa"),
-    pm("credit_card", "ICICI", "Amazon Pay", "visa"),
+    pm("credit_card", "ICICI", "Amazon Pay ICICI", "visa"),
     pm("credit_card", "ICICI", "Coral", "rupay"),
-    pm("credit_card", "SBI", "Cashback", "visa"),
+    pm("credit_card", "SBI Card", "Cashback", "visa"),
     pm("credit_card", "Axis", "Scapia", "mastercard"),
     pm("credit_card", "Axis", "Scapia", "rupay"),
-    pm("credit_card", "Slice", "Slice", "rupay"),
-    pm("credit_card", "IDFC First", "Millennia", "visa"),
-    pm("credit_card", "BOB", "Select", "mastercard"),
+    pm("credit_card", "slice", "slice", "rupay"),
+    pm("credit_card", "IDFC FIRST", "Millennia", "visa"),
+    pm("credit_card", "BOBCARD", "Select", "mastercard"),
     pm("upi", null, "GPay", null),
     pm("upi", null, "PhonePe", null),
     pm("upi", null, "Paytm", null),
@@ -86,15 +93,15 @@ const seed = (
 db.subscriptions = [
   seed("Netflix", "649.00", "INR", "monthly", 2, "ICICI Sapphiro", "Streaming", "active", "Premium plan", "visa"),
   seed("Spotify", "119.00", "INR", "monthly", 5, "GPay", "Music"),
-  seed("YouTube Premium", "149.00", "INR", "monthly", 14, "HDFC Moneyback+", "Streaming"),
-  seed("Amazon Prime", "1499.00", "INR", "yearly", 118, "ICICI Amazon Pay", "Shopping"),
-  seed("Apple iCloud+", "75.00", "INR", "monthly", 8, "SBI Cashback", "Cloud storage", "active", "50 GB"),
+  seed("YouTube Premium", "149.00", "INR", "monthly", 14, "HDFC Bank MoneyBack+", "Streaming"),
+  seed("Amazon Prime", "1499.00", "INR", "yearly", 118, "Amazon Pay ICICI", "Shopping"),
+  seed("Apple iCloud+", "75.00", "INR", "monthly", 8, "SBI Card Cashback", "Cloud storage", "active", "50 GB"),
   seed("ChatGPT Plus", "20.00", "USD", "monthly", 1, "Axis Scapia", "Software/AI", "active", "", "mastercard"),
-  seed("cult.fit", "1299.00", "INR", "monthly", 17, "IDFC First Millennia", "Fitness", "active", "cultpass"),
+  seed("cult.fit", "1299.00", "INR", "monthly", 17, "IDFC FIRST Millennia", "Fitness", "active", "cultpass"),
   seed("Swiggy One", "899.00", "INR", "quarterly", 29, "Axis Scapia", "Food delivery", "active", "", "rupay"),
   seed("Zomato Gold", "299.00", "INR", "quarterly", 71, "PhonePe", "Food delivery"),
   seed("Notion", "10.00", "USD", "monthly", 23, "Axis Scapia", "Software/AI", "active", "Plus plan", "mastercard"),
-  seed("Audible", "199.00", "INR", "monthly", 36, "Slice", "Music", "paused", "Paused until January"),
+  seed("Audible", "199.00", "INR", "monthly", 36, "slice", "Music", "paused", "Paused until January"),
   seed("JioHotstar", "299.00", "INR", "monthly", 140, "ICICI Coral", "Streaming", "cancelled"),
 ];
 
