@@ -5,7 +5,7 @@ import { useState } from "react";
 import type { Category, Status, Subscription } from "../api/types";
 import { Dropdown, type MenuItem } from "../components/Dropdown";
 import { EmptyState } from "../components/EmptyState";
-import { Segmented } from "../components/Segmented";
+import { PillNavigation } from "../components/ui/pill-navigation";
 import { LoadError, Loading, ScreenHeader } from "../components/ScreenHeader";
 import { RowGroup, SubRow } from "../components/SubRow";
 import { subscriptionRow } from "../components/rowProps";
@@ -104,25 +104,24 @@ export function Subscriptions() {
       })),
   ];
 
-  const tabLabel = (label: string, t: Tab) => (
-    <>
-      {label} <span className="font-normal text-fg3">{count(t)}</span>
-    </>
-  );
 
   return (
     <div className="flex animate-screen-in flex-col gap-[18px]">
       {header}
-      <Segmented<Tab>
-        value={tab}
-        onChange={setTab}
-        options={[
-          { value: "active", label: tabLabel("Active", "active") },
-          { value: "paused", label: tabLabel("Paused", "paused") },
-          { value: "cancelled", label: tabLabel("Cancelled", "cancelled") },
-          { value: "all", label: tabLabel("All", "all") },
-        ]}
-      />
+      {/* easyui pill navigation for the status tabs (labels carry the counts). */}
+      <div className="flex justify-center">
+        <PillNavigation
+          aria-label="Filter by status"
+          defaultValue={tab}
+          items={[
+            { id: "active", label: `Active ${count("active")}` },
+            { id: "paused", label: `Paused ${count("paused")}` },
+            { id: "cancelled", label: `Cancelled ${count("cancelled")}` },
+            { id: "all", label: `All ${count("all")}` },
+          ]}
+          onChange={(id) => setTab(id as Tab)}
+        />
+      </div>
 
       <div className="relative z-5 flex flex-wrap gap-2">
         <Dropdown

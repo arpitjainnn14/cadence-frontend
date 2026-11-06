@@ -1,11 +1,11 @@
-import { Link, useNavigate } from "react-router";
+import { Link } from "react-router";
 import { EmptyState } from "../components/EmptyState";
 import { BellIcon, ThemeIcon } from "../components/Icons";
 import { useTheme } from "../ui/theme";
 import { LoadError, Loading, ScreenHeader, SectionTitle } from "../components/ScreenHeader";
 import { RowGroup, SubRow } from "../components/SubRow";
 import { upcomingRow } from "../components/rowProps";
-import { WalletHero } from "../components/WalletHero";
+import { HomeWallet } from "../components/HomeWallet";
 import { BudgetMeter } from "../components/BudgetMeter";
 import { usePaymentMethodMap, useSubscriptions, useSummary } from "../data/queries";
 import { longToday, toNum } from "../lib/format";
@@ -19,7 +19,6 @@ export function Home() {
   const pms = usePaymentMethodMap();
   const { openSubscription } = useUi();
   const desk = useIsDesktop();
-  const navigate = useNavigate();
   const { dark, toggle: toggleTheme } = useTheme();
 
   // Two round buttons like the design: the bell (with an orange dot when
@@ -117,12 +116,11 @@ export function Home() {
       <div className="grid items-start gap-x-10 gap-y-8" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 350px), 1fr))" }}>
         {/* Wallet with the totals, and the ₹ budget meter under it */}
         <div className="flex flex-col gap-4">
-          <WalletHero
+          <HomeWallet
             monthly={{ inr: toNum(s.monthly), usd: toNum(usdTotals.monthly) }}
             halfYearly={{ inr: toNum(s.half_yearly), usd: toNum(usdTotals.half_yearly) }}
             yearly={{ inr: toNum(s.yearly), usd: toNum(usdTotals.yearly) }}
             cards={walletCards}
-            onOpenCard={(id) => navigate(`/cards/${id}`)}
           />
           <BudgetMeter budget={s.budget} hasUsd={!!s.usd} />
         </div>

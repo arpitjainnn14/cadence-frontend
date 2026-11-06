@@ -1,9 +1,9 @@
 import { useState } from "react";
 import type { Period, Subscription } from "../api/types";
-import { Donut, type Slice } from "../components/Donut";
+import { DonutChart } from "../components/ui/donut-chart";
+import { PillNavigation } from "../components/ui/pill-navigation";
 import { EmptyState } from "../components/EmptyState";
 import { MerchantLogo } from "../components/MerchantLogo";
-import { Segmented } from "../components/Segmented";
 import { LoadError, Loading, ScreenHeader } from "../components/ScreenHeader";
 import { useInsights, usePaymentLabels, usePaymentMethodMap, useSubscriptions } from "../data/queries";
 import { CATEGORY_COLOR, RANK_PALETTE } from "../lib/categories";
@@ -13,6 +13,18 @@ import { useUi } from "../ui/UiContext";
 import { usdText } from "../lib/money";
 
 type View = "cat" | "pay" | "top";
+const PERIODS = [
+  { id: "monthly", label: "Monthly" },
+  { id: "yearly", label: "Yearly" },
+];
+
+/** One slice of a donut, plus the key used to remember which one is selected. */
+interface Slice {
+  key: string;
+  label: string;
+  value: number;
+  color: string;
+}
 
 export function Insights() {
   const [period, setPeriod] = useState<Period>("monthly");
@@ -21,26 +33,7 @@ export function Insights() {
   const subs = useSubscriptions();
   const labels = usePaymentLabels();
 
-  const header = (
-    <ScreenHeader
-      eyebrow="Active subscriptions only"
-      title="Insights"
-      right={
-        view !== "top" && (
-          <Segmented<Period>
-            className="w-[192px]"
-            height={32}
-            value={period}
-            onChange={setPeriod}
-            options={[
-              { value: "monthly", label: "Monthly" },
-              { value: "yearly", label: "Yearly" },
-            ]}
-          />
-        )
-      }
-    />
-  );
+  const header = <ScreenHeader eyebrow="Active subscriptions only" title="Insights" />;
 
   if (insights.isError || subs.isError)
     return <div className="flex max-w-[720px] flex-col gap-[18px]">{header}<LoadError onRetry={() => (insights.refetch(), subs.refetch())} /></div>;
@@ -53,16 +46,23 @@ export function Insights() {
   return (
     <div className="flex max-w-[720px] animate-screen-in flex-col gap-[18px]">
       {header}
-      <Segmented<View>
-        className="w-full max-w-[720px]"
-        value={view}
-        onChange={setView}
-        options={[
-          { value: "cat", label: "Category" },
-          { value: "pay", label: "Card" },
-          { value: "top", label: "Top" },
-        ]}
-      />
+      {/* easyui pill navigation: views on top, Monthly / Yearly as the sub-row of the two charts. */}
+      <div className="flex justify-center">
+        <PillNavigation
+          aria-label="Insights view"
+          defaultValue={view}
+          defaultSubValue={period}
+          items={[
+            { id: "cat", label: "Category", children: PERIODS },
+            { id: "pay", label: "Card", children: PERIODS },
+            { id: "top", label: "Top" },
+          ]}
+          onChange={(id, sub) => {
+            setView(id as View);
+            if (sub) setPeriod(sub as Period);
+          }}
+        />
+      </div>
       <div className="flex w-full max-w-[720px] flex-col gap-4">
         {!d ? (
           <Loading />
@@ -118,10 +118,7 @@ interface DonutCardProps {
 function DonutCard({ title, period, unit, groups, subById }: DonutCardProps) {
   const { openSubscription } = useUi();
   const [selected, setSelected] = useState<string | null>(null);
-  const [hover, setHover] = useState<string | null>(null);
-  const focus = hover ?? selected;
   const slices = groups.map((g) => g.slice);
-  const total = slices.reduce((a, s) => a + s.value, 0) || 1;
   const sel = groups.find((g) => g.slice.key === selected);
   const perPeriod = (s: Subscription) => toNum(s.yearly_amount) / (period === "yearly" ? 1 : 12); // chart slices only hold ₹ subs
   const selSubs = (sel?.ids ?? [])
@@ -136,34 +133,14 @@ function DonutCard({ title, period, unit, groups, subById }: DonutCardProps) {
         <h2 className="m-0 text-base font-semibold tracking-[-0.01em]">{title}</h2>
         <span className="text-[12.5px] text-fg3">Tap a slice</span>
       </div>
-      <div className="flex flex-wrap items-center justify-center gap-[22px]">
-        <Donut
-          slices={slices}
-          focus={focus}
-          onSelect={toggle}
-          onHover={setHover}
-          centerLabel={period === "yearly" ? "Per year" : "Per month"}
-          centerSub={`${slices.length} ${unit[slices.length === 1 ? 0 : 1]}`}
-        />
-        <div className="flex flex-[1_1_210px] flex-col">
-          {slices.map((x) => (
-            <button
-              key={x.key}
-              type="button"
-              onClick={() => toggle(x.key)}
-              onMouseEnter={() => setHover(x.key)}
-              onMouseLeave={() => setHover(null)}
-              className="flex h-9 items-center gap-2.5 rounded-[9px] border-none px-2 text-left text-inherit transition-[opacity,background] duration-200"
-              style={{ background: selected === x.key ? "var(--color-s2)" : "transparent", opacity: focus && focus !== x.key ? 0.45 : 1 }}
-            >
-              <span className="h-2 w-2 flex-none rounded-[2px]" style={{ background: x.color }} />
-              <span className="min-w-0 flex-1 truncate text-sm">{x.label}</span>
-              <span className="text-[12.5px] text-fg3 tabular-nums">{Math.round((x.value / total) * 100)}%</span>
-              <span className="min-w-16 text-right text-sm font-medium tabular-nums">₹{groupINR(x.value)}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* easyui donut chart: hover or tap a slice to read it; tapping also lists its subscriptions below. */}
+      <DonutChart
+        data={slices.map((x) => ({ label: x.label, value: x.value, color: x.color }))}
+        centerLabel={`${period === "yearly" ? "Per year" : "Per month"} · ${slices.length} ${unit[slices.length === 1 ? 0 : 1]}`}
+        formatValue={(n) => `₹${groupINR(n)}`}
+        ariaLabel={`${title}, ${period === "yearly" ? "per year" : "per month"}`}
+        onSliceClick={(i) => toggle(slices[i].key)}
+      />
       {sel && (
         <div className="flex animate-fade-in flex-col border-t border-hair pt-3">
           <div className="flex items-center justify-between px-0.5 pb-1.5">
