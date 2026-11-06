@@ -12,6 +12,7 @@ import { cardLook } from "../lib/cardStyle";
 import { groupINR } from "../lib/format";
 import { dualText, usdText, type Dual } from "../lib/money";
 import { WalletBalance, type WalletAccount } from "./ui/wallet-balance";
+import { Wordmark } from "./Wordmark";
 
 interface Props {
   /** Amounts shown (false after tapping the eye). Owned by Home so the budget meter can hide too. */
@@ -36,7 +37,7 @@ export function HomeWallet({ visible, onVisibleChange, monthly, halfYearly, year
         id: pm.id,
         name: pm.display_name,
         balance: Math.round(m.inr),
-        logo: <Wordmark text={look.bank} ink={look.ink} lowercase={look.lowercase} italic={look.italic} />,
+        logo: <Wordmark look={look} size={21} />,
         background: look.bg,
         amountColor: look.sub,
       };
@@ -84,17 +85,5 @@ export function HomeWallet({ visible, onVisibleChange, monthly, halfYearly, year
       )}
       <span className="sr-only">{visible ? `Monthly spend ₹${groupINR(monthly.inr)}` : ""}</span>
     </div>
-  );
-}
-
-/** The bank as a bold wordmark in its brand colour (same as on the drawn cards). */
-function Wordmark({ text, ink, lowercase, italic }: { text: string; ink: string; lowercase?: boolean; italic?: boolean }) {
-  return (
-    <span
-      className={`text-[21px] leading-none font-extrabold tracking-[-0.045em] ${italic ? "italic" : ""}`}
-      style={{ color: ink }}
-    >
-      {lowercase ? text.toLowerCase() : text}
-    </span>
   );
 }

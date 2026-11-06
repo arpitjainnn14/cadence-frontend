@@ -21,10 +21,6 @@ export interface CardLook {
   /** Brand quirks of the wordmark, e.g. "scapia" in lowercase, ICICI in italics. */
   lowercase?: boolean;
   italic?: boolean;
-  /** Square tile colours for UPI apps. */
-  tile?: string;
-  tileFg?: string;
-  mark?: string;
 }
 
 type Preset = Partial<Omit<CardLook, "bg" | "ink" | "sub">>;
@@ -60,19 +56,16 @@ export function pastelOf(color: string): Pastel {
   };
 }
 
-// Names and UPI tiles that differ from the defaults, keyed by lower-cased display_name.
+// Wordmark and second-line text that differ from the defaults, keyed by lower-cased display_name.
 const PRESETS: Record<string, Preset> = {
   // Co-branded cards: the design puts the brand on top and the issuer underneath.
   "amazon pay icici": { bank: "Amazon Pay", name: "ICICI Bank" },
   "axis scapia|mastercard": { bank: "Scapia", name: "Axis Bank" },
   "axis scapia|rupay": { bank: "Scapia", name: "Axis Bank" },
   slice: { bank: "slice", name: "Super card" },
-  gpay: { mark: "G", tile: "#FFFFFF", tileFg: "#1A73E8" },
-  "google pay": { mark: "G", tile: "#FFFFFF", tileFg: "#1A73E8" },
-  phonepe: { mark: "Pe", tile: "#5F259F", tileFg: "#fff" },
-  paytm: { mark: "P", tile: "#00B9F1", tileFg: "#fff" },
-  "cred upi": { mark: "C", tile: "#1A1A1A", tileFg: "#fff" },
-  "slice upi": { mark: "s", tile: "#6024D0", tileFg: "#fff" },
+  // UPI apps: the wordmark is the brand alone ("UPI AutoPay" is the second line).
+  "cred upi": { bank: "CRED" },
+  "slice upi": { bank: "slice" },
 };
 
 // The backend stores short bank names ("HDFC"); the card art shows the full
@@ -114,18 +107,13 @@ export function cardLook(pm: PaymentMethod): CardLook {
   const tone = TONES[hash(key) % TONES.length];
   const upi = pm.type === "upi";
   // A colour you picked (Add card) beats the built-in look; null means "we pick".
-  const pastel = pm.color ? pastelOf(pm.color) : (PASTELS[`${key}|${pm.network}`] ?? PASTELS[key] ?? pastelOf(preset.tile ?? tone));
-  const chosen = pm.color ? { tile: pm.color, tileFg: "#fff" } : {};
+  const pastel = pm.color ? pastelOf(pm.color) : (PASTELS[`${key}|${pm.network}`] ?? PASTELS[key] ?? pastelOf(tone));
   return {
     kind: upi ? "upi" : "card",
     bank: upi ? pm.name : (BANK_ON_CARD[(pm.bank ?? "").toLowerCase()] ?? pm.bank ?? pm.name),
     name: upi ? "UPI AutoPay" : cardName(pm.bank, pm.name),
     network: pm.network,
-    tile: tone,
-    tileFg: "#fff",
-    mark: pm.name.replace(/[^A-Za-z]/g, "").slice(0, 1).toUpperCase(),
     ...preset,
-    ...chosen,
     ...pastel,
   };
 }

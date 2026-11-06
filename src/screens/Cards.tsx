@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router";
 import type { PaymentMethod } from "../api/types";
 import { CardArt } from "../components/CardArt";
+import { Wordmark } from "../components/Wordmark";
 import { PlusIcon } from "../components/Icons";
 import { LoadError, Loading, ScreenHeader, SectionTitle } from "../components/ScreenHeader";
 import { usePaymentLabels, usePaymentMethods, useSubscriptions } from "../data/queries";
@@ -100,24 +101,23 @@ export function Cards() {
             const look = cardLook(p);
             const u = usageOf(p.id, all);
             return (
+              // A small pastel tile in the same style as the cards: the app's
+              // wordmark in its brand colour, then what it pays for.
               <button
                 key={p.id}
                 type="button"
                 onClick={() => open(p)}
-                className="flex items-center gap-3 rounded-2xl border-none bg-s1 p-3 text-left text-inherit shadow-lift"
+                aria-label={p.display_name}
+                className="flex min-h-[74px] flex-col justify-between gap-2.5 rounded-2xl border-none px-3.5 py-3 text-left transition-transform duration-200 active:scale-[0.98]"
+                style={{
+                  background: `linear-gradient(180deg, rgba(255,255,255,0.28), rgba(255,255,255,0) 55%), ${look.bg}`,
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.65), 0 1px 2px rgba(0,0,0,0.12)",
+                }}
               >
-                <div
-                  className="grid h-[38px] w-[38px] flex-none place-items-center rounded-[11px] text-sm font-bold tracking-[-0.02em]"
-                  style={{ background: look.tile, color: look.tileFg }}
-                >
-                  {look.mark}
-                </div>
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="text-sm font-medium">{p.display_name}</span>
-                  <span className="text-xs whitespace-nowrap text-fg3">
-                    {u.count ? `${dualText(u.monthly)}/mo · ${u.count}` : "Not used"}
-                  </span>
-                </div>
+                <Wordmark look={look} size={20} />
+                <span className="text-xs font-semibold whitespace-nowrap tabular-nums" style={{ color: look.sub }}>
+                  {u.count ? `${dualText(u.monthly)}/mo · ${plural(u.count, "subscription", "subscriptions")}` : "Not used yet"}
+                </span>
               </button>
             );
           })}

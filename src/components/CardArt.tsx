@@ -6,6 +6,7 @@
 // isn't used.
 import type { CSSProperties } from "react";
 import type { CardLook } from "../lib/cardStyle";
+import { Wordmark } from "./Wordmark";
 
 interface Props {
   look: CardLook;
@@ -19,7 +20,7 @@ export function CardArt({ look, badge, selected }: Props) {
     // text-left: cards often sit inside a <button>, which centres text by default.
     <div className="w-full text-left" style={{ containerType: "inline-size" }}>
       <div
-        className="relative w-full overflow-hidden"
+        className="relative w-full overflow-clip"
         style={{
           aspectRatio: "1.586",
           borderRadius: "5cqw",
@@ -78,13 +79,8 @@ function DrawnFace({ look, upi, badge }: { look: CardLook; upi: boolean; badge?:
           style={{ top: "6.4cqw", left: "7cqw", right: "7cqw", gap: "3cqw" }}
         >
           <div className="flex min-w-0 flex-col" style={{ gap: "1.6cqw" }}>
-            {/* Wordmark, as on the wallet cards: 21px on a 266px card ≈ 7.9cqw. */}
-            <span
-              className={`leading-none font-extrabold whitespace-nowrap ${look.italic ? "italic" : ""}`}
-              style={{ fontSize: "7.9cqw", letterSpacing: "-0.045em" }}
-            >
-              {look.lowercase ? look.bank.toLowerCase() : look.bank}
-            </span>
+            {/* As on the wallet cards: 21px on a 266px card ≈ 7.9cqw. */}
+            <Wordmark look={look} size="7.9cqw" />
             {look.name && (
               <span className="font-semibold whitespace-nowrap" style={{ fontSize: "3.8cqw", color: look.sub }}>
                 {look.name}
