@@ -8,7 +8,8 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ApiError } from "../api/client";
 import { APP_NAME, AppTile, TAGLINE } from "../brand";
-import { EyeIcon, EyeOffIcon } from "../components/Icons";
+import { CheckIcon, EyeIcon, EyeOffIcon } from "../components/Icons";
+import { justSignedOut } from "../data/signOut";
 import { MadeBy } from "../components/MadeBy";
 import { useLogin } from "../data/queries";
 import { formatCountdown, loadLastEmail, loadLock, lockUntil, saveLastEmail, saveLock } from "../lib/loginLock";
@@ -19,6 +20,7 @@ export function Login() {
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState("");
   const [shakeKey, setShakeKey] = useState(0); // bump to replay the shake
+  const [signedOut] = useState(justSignedOut); // confirm a logout that just happened
   const [lockedUntil, setLockedUntil] = useState<number | null>(() => loadLock());
   const [now, setNow] = useState(Date.now());
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -93,6 +95,11 @@ export function Login() {
           <div className="flex flex-col gap-1.5" style={{ animation: "fadeIn .5s ease .12s both" }}>
             <h1 className="m-0 text-[28px] font-bold tracking-[-0.035em]">Sign in to {APP_NAME}</h1>
             <p className="m-0 text-[15px] text-fg2">{TAGLINE}</p>
+            {signedOut && (
+              <p role="status" className="m-0 mt-2 inline-flex animate-fade-in items-center justify-center gap-1.5 self-center rounded-full bg-s2 px-3 py-1 text-[13px] text-fg2">
+                <CheckIcon size={14} /> You're signed out
+              </p>
+            )}
           </div>
         </div>
 
