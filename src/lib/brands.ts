@@ -1,5 +1,5 @@
 // A small built-in list of common merchants. It gives us:
-//  - brand-coloured letter tiles (used whenever there's no logo image),
+//  - brand-coloured letter tiles (shown when the backend has no logo, or while it loads),
 //  - "did you mean" suggestions while typing,
 //  - a sensible default category when you pick one.
 // Real logos come from the backend (`logo_url`); this is the fallback look.
