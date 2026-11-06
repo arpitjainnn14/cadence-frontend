@@ -1,6 +1,10 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
-import { useMe } from "./data/queries";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "./api/endpoints";
+import type { Me } from "./api/types";
+import { keys, useMe } from "./data/queries";
+import { Splash } from "./layout/Splash";
 import { AppShell } from "./layout/AppShell";
 import { CardDetail } from "./screens/CardDetail";
 import { Cards } from "./screens/Cards";
@@ -10,6 +14,8 @@ import { Settings } from "./screens/Settings";
 import { Subscriptions } from "./screens/Subscriptions";
 import { UiProvider } from "./ui/UiContext";
 import { Loading } from "./components/ScreenHeader";
+import { looksSignedIn } from "./data/startup";
+import { StartupSkeleton } from "./layout/StartupSkeleton";
 
 // Insights (and its animated donut chart) is downloaded only when you open it,
 // which keeps the first load of the app smaller.
@@ -17,12 +23,28 @@ const Insights = lazy(() => import("./screens/Insights").then((m) => ({ default:
 
 export function App() {
   const me = useMe();
+  // The opening splash may leave once we know who you are and, if you're
+  // signed in, Home's totals have arrived (they were requested alongside /me).
+  const summary = useQuery({ queryKey: keys.summary, queryFn: api.summary, enabled: !!me.data });
+  const ready = !me.isPending && (!me.data || !summary.isPending);
+
+  return (
+    <>
+      <Screens me={me.data} pending={me.isPending} />
+      <Splash ready={ready} />
+    </>
+  );
+}
+
+function Screens({ me, pending }: { me: Me | null | undefined; pending: boolean }) {
 
   // First load: we don't know yet whether the cookies hold a valid session.
-  if (me.isPending) return <div className="h-full bg-bg" />;
+  // If this browser looks signed in, show Home's outline right away instead
+  // of a blank page (the real data is already loading, see data/startup.ts).
+  if (pending) return looksSignedIn() ? <StartupSkeleton /> : <div className="h-full bg-bg" />;
 
   // No session (or it expired and refresh failed) → login screen.
-  if (!me.data) return <Login />;
+  if (!me) return <Login />;
 
   return (
     <UiProvider>
