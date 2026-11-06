@@ -47,7 +47,7 @@ export function Insights() {
     <div className="flex max-w-[720px] animate-screen-in flex-col gap-[18px]">
       {header}
       {/* easyui pill navigation: views on top, Monthly / Yearly as the sub-row of the two charts. */}
-      <div className="flex justify-center">
+      <div className="flex justify-center min-[900px]:justify-start">
         <PillNavigation
           aria-label="Insights view"
           defaultValue={view}

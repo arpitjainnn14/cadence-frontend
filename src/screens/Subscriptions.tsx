@@ -109,7 +109,7 @@ export function Subscriptions() {
     <div className="flex animate-screen-in flex-col gap-[18px]">
       {header}
       {/* easyui pill navigation for the status tabs (labels carry the counts). */}
-      <div className="flex justify-center">
+      <div className="flex justify-center min-[900px]:justify-start">
         <PillNavigation
           aria-label="Filter by status"
           defaultValue={tab}
