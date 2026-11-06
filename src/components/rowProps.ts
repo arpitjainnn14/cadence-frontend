@@ -14,20 +14,22 @@ export function subscriptionRow(
 ): SubRowProps {
   const active = s.status === "active";
   const cardName = opts.label ?? pm?.display_name ?? "No card";
+  const d = daysUntil(s.next_renewal);
+  const soon = active && d <= 7;
   let sub: string;
   if (s.status === "paused") sub = `Paused · ${cardName}`;
   else if (s.status === "cancelled") sub = s.cancelled_at ? `Cancelled ${shortDate(s.cancelled_at)}` : "Cancelled";
-  else if (opts.showCard === false) {
-    const d = daysUntil(s.next_renewal);
-    sub = `${relDays(d)} · ${shortDate(s.next_renewal)}`;
-  } else sub = cardName;
+  // Renewing within a week: say when (that's what the orange means). The card
+  // is still shown by the swatch on the right.
+  else if (opts.showCard === false || soon) sub = `${relDays(d)} · ${shortDate(s.next_renewal)}`;
+  else sub = cardName;
 
   return {
     name: s.merchant_name,
     logoUrl: s.logo_url,
     sub,
     // Orange second line whenever it renews within a week (the design does this on every list).
-    soon: active && daysUntil(s.next_renewal) <= 7,
+    soon,
     price: price(s.amount, s.currency),
     cycle: CYCLES[s.billing_cycle].short,
     // Yearly cost in the subscription's own currency (no ₹/$ conversion).

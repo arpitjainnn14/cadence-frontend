@@ -9,6 +9,7 @@ import {
   type Category,
   type Currency,
   type MerchantResolve,
+  type PaymentMethod,
   type Status,
   type Subscription,
   type SubscriptionIn,
@@ -312,7 +313,7 @@ export function SubscriptionSheet({ editing, preset }: Props) {
                 {pm
                   ? pm.type === "upi"
                     ? "UPI AutoPay"
-                    : `${NETWORK_LABEL[pm.network ?? ""] ?? "Card"}${pm.bank ? " · " + pm.bank : ""}`
+                    : paidWithDetail(pm, labels.get(pm.id) ?? pm.display_name)
                   : "Pick the card or UPI app it's billed to"}
               </span>
             </div>
@@ -469,4 +470,16 @@ function CurrencySwitch({ value, onChange }: { value: Currency; onChange: (c: Cu
       ))}
     </div>
   );
+}
+
+/**
+ * The grey line under the chosen card: network and bank, minus whatever the
+ * name above already says ("HDFC Bank MoneyBack+" → "Visa"; the twin label
+ * "ICICI Sapphiro · Visa" → "Credit card").
+ */
+function paidWithDetail(pm: PaymentMethod, label: string): string {
+  const said = label.toLowerCase();
+  const network = NETWORK_LABEL[pm.network ?? ""];
+  const parts = [network, pm.bank].filter((x): x is string => !!x && !said.includes(x.toLowerCase()));
+  return parts.length ? parts.join(" · ") : "Credit card";
 }
