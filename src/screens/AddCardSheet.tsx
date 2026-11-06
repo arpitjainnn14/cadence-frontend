@@ -6,7 +6,7 @@ import { CardArt } from "../components/CardArt";
 import { Segmented } from "../components/Segmented";
 import { FieldLabel, PrimaryButton, Sheet } from "../components/Sheet";
 import { useAddCard } from "../data/queries";
-import { CARD_COLORS, toneGradient, type CardLook } from "../lib/cardStyle";
+import { CARD_COLORS, pastelOf, type CardLook } from "../lib/cardStyle";
 import { useUi } from "../ui/UiContext";
 
 type Net = Exclude<Network, null>;
@@ -26,7 +26,7 @@ export function AddCardSheet() {
     bank: bank || "Bank",
     name: name || "Card name",
     network,
-    bg: toneGradient(color),
+    ...pastelOf(color),
   };
 
   function save() {
@@ -95,8 +95,12 @@ export function AddCardSheet() {
               onClick={() => setColor(c)}
               className="h-[34px] w-[34px] rounded-[17px] border-none transition-shadow duration-200"
               style={{
-                background: c,
-                boxShadow: color === c ? "0 0 0 2px var(--color-s1), 0 0 0 4px var(--color-fg)" : "inset 0 0 0 1px rgba(255,255,255,0.1)",
+                // The pastel the card will get, with its wordmark colour as the edge.
+                background: pastelOf(c).bg,
+                boxShadow:
+                  color === c
+                    ? `inset 0 0 0 2px ${pastelOf(c).ink}, 0 0 0 2px var(--color-s1), 0 0 0 4px var(--color-fg)`
+                    : `inset 0 0 0 2px ${pastelOf(c).ink}`,
               }}
             />
           ))}

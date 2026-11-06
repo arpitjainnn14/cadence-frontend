@@ -31,15 +31,14 @@ export function HomeWallet({ visible, onVisibleChange, monthly, halfYearly, year
     .filter((c) => c.monthly.inr > 0)
     .slice(0, 3)
     .map(({ pm, monthly: m }) => {
-      const look = cardLook(pm);
-      const style = pastelFor(pm, look.tile ?? "#8E8E8B");
+      const look = cardLook(pm); // the shared pastel style (lib/cardStyle.ts)
       return {
         id: pm.id,
         name: pm.display_name,
         balance: Math.round(m.inr),
-        logo: <Wordmark text={look.bank} ink={style.ink} lowercase={style.lowercase} italic={style.italic} />,
-        background: style.bg,
-        amountColor: style.amount,
+        logo: <Wordmark text={look.bank} ink={look.ink} lowercase={look.lowercase} italic={look.italic} />,
+        background: look.bg,
+        amountColor: look.sub,
       };
     });
 
@@ -88,38 +87,7 @@ export function HomeWallet({ visible, onVisibleChange, monthly, halfYearly, year
   );
 }
 
-// --- Pastel card faces, like the easyui demo (soft colour + a brand-coloured wordmark) ---
-
-type Pastel = { bg: string; ink: string; amount: string; lowercase?: boolean; italic?: boolean };
-
-// Keyed by lower-cased display name (and network for the twin cards).
-const PASTELS: Record<string, Pastel> = {
-  "hdfc bank moneyback+": { bg: "#b3c6f2", ink: "#123f8c", amount: "#3a5a9c" },
-  "icici sapphiro|visa": { bg: "#c3cddd", ink: "#7a1f1f", amount: "#4b5a70", italic: true },
-  "icici sapphiro|rupay": { bg: "#cfd3dc", ink: "#7a1f1f", amount: "#525b6b", italic: true },
-  "amazon pay icici": { bg: "#f6d59a", ink: "#232f3e", amount: "#8a5f17", lowercase: true },
-  "icici coral": { bg: "#f4b9a8", ink: "#8f2a1c", amount: "#9a4a38", italic: true },
-  "sbi card cashback": { bg: "#c2b9f0", ink: "#2b2a8c", amount: "#544aa3" },
-  "axis scapia|mastercard": { bg: "#a6dccd", ink: "#0f5248", amount: "#2c7366", lowercase: true },
-  "axis scapia|rupay": { bg: "#bfdcaa", ink: "#2c4f1d", amount: "#4a7236", lowercase: true },
-  slice: { bg: "#d1b9f8", ink: "#4a1aa8", amount: "#6a46b8", lowercase: true },
-  "idfc first millennia": { bg: "#f2b1b8", ink: "#8a1622", amount: "#9a3a45" },
-  "bobcard select": { bg: "#f6c6a5", ink: "#9a3f0c", amount: "#a35a2c" },
-};
-
-function pastelFor(pm: PaymentMethod, tone: string): Pastel {
-  const key = pm.display_name.toLowerCase();
-  const preset = PASTELS[`${key}|${pm.network}`] ?? PASTELS[key];
-  if (preset && !pm.color) return preset;
-  // Anything else: a pastel mixed from the card's own colour.
-  const base = pm.color ?? tone;
-  return {
-    bg: `color-mix(in oklab, ${base} 38%, #ffffff)`,
-    ink: `color-mix(in oklab, ${base} 80%, #000000)`,
-    amount: `color-mix(in oklab, ${base} 70%, #333333)`,
-  };
-}
-
+/** The bank as a bold wordmark in its brand colour (same as on the drawn cards). */
 function Wordmark({ text, ink, lowercase, italic }: { text: string; ink: string; lowercase?: boolean; italic?: boolean }) {
   return (
     <span

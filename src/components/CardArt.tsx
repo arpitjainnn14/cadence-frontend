@@ -1,7 +1,9 @@
 // Drawn credit card / UPI card from CardArt.dc.html ("gradient" variant).
 // Sizes use container-query units (cqw) so the card scales with its width,
-// exactly like the design. Every card is drawn (bank colour or the colour you
-// picked, bank + card name, chip, network); uploaded card art isn't used.
+// exactly like the design. Every card is drawn in the Home wallet's pastel
+// style: a soft pastel face with a white sheen, the bank as a bold wordmark in
+// the brand's colour, then the card name, chip and network. Uploaded card art
+// isn't used.
 import type { CSSProperties } from "react";
 import type { CardLook } from "../lib/cardStyle";
 
@@ -21,10 +23,11 @@ export function CardArt({ look, badge, selected }: Props) {
         style={{
           aspectRatio: "1.586",
           borderRadius: "5cqw",
-          background: look.bg,
-          color: look.fg ?? "#fff",
+          // Same sheen as the wallet cards: light from the top, fading by the middle.
+          background: `linear-gradient(180deg, rgba(255,255,255,0.28), rgba(255,255,255,0) 45%), ${look.bg}`,
+          color: look.ink,
           boxShadow:
-            "inset 0 1px 0 rgba(255,255,255,0.12), inset 0 0 0 1px rgba(255,255,255,0.06), 0 22px 44px -22px rgba(0,0,0,0.7), 0 2px 6px rgba(0,0,0,0.25)",
+            "inset 0 1px 0 rgba(255,255,255,0.65), inset 0 0 0 1px rgba(0,0,0,0.04), 0 18px 36px -20px rgba(0,0,0,0.45), 0 2px 6px rgba(0,0,0,0.12)",
           outline: selected ? "2px solid var(--color-fg)" : "2px solid transparent",
           outlineOffset: 3,
           transition: "outline-color .2s",
@@ -36,8 +39,8 @@ export function CardArt({ look, badge, selected }: Props) {
   );
 }
 
-/** Spend pill in the top-right corner. */
-function Badge({ text }: { text: string }) {
+/** Spend pill in the top-right corner, in the card's own shade (like the wallet's amounts). */
+function Badge({ text, color }: { text: string; color: string }) {
   return (
     <span
       className="font-semibold whitespace-nowrap tabular-nums"
@@ -46,7 +49,9 @@ function Badge({ text }: { text: string }) {
         fontSize: "max(11px, 4.2cqw)",
         padding: "1.2cqw 2.6cqw",
         borderRadius: 99,
-        background: "rgba(0,0,0,0.24)",
+        color,
+        background: "rgba(255,255,255,0.42)",
+        boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.5)",
       }}
     >
       {text}
@@ -64,30 +69,29 @@ function DrawnFace({ look, upi, badge }: { look: CardLook; upi: boolean; badge?:
           style={{ background: "radial-gradient(130% 90% at 0% 0%,rgba(255,255,255,0.18),rgba(255,255,255,0) 52%)" }}
         />
         {/* decorative rings */}
-        <div className="absolute rounded-full" style={ring(96, -44, -58, 0.1)} />
-        <div className="absolute rounded-full" style={ring(64, -26, -40, 0.07)} />
+        <div className="absolute rounded-full" style={ring(96, -44, -58, 0.38)} />
+        <div className="absolute rounded-full" style={ring(64, -26, -40, 0.28)} />
 
         {/* top row: bank + product, badge */}
         <div
           className="absolute flex items-start justify-between"
           style={{ top: "6.4cqw", left: "7cqw", right: "7cqw", gap: "3cqw" }}
         >
-          <div className="flex min-w-0 flex-col" style={{ gap: "1.2cqw" }}>
-            <div className="flex items-center" style={{ gap: "2cqw" }}>
-              {look.dot && (
-                <span className="flex-none" style={{ width: "3.2cqw", height: "3.2cqw", borderRadius: "0.8cqw", background: look.dot }} />
-              )}
-              <span className="font-semibold whitespace-nowrap" style={{ fontSize: "4.7cqw", letterSpacing: "-0.01em" }}>
-                {look.bank}
-              </span>
-            </div>
+          <div className="flex min-w-0 flex-col" style={{ gap: "1.6cqw" }}>
+            {/* Wordmark, as on the wallet cards: 21px on a 266px card ≈ 7.9cqw. */}
+            <span
+              className={`leading-none font-extrabold whitespace-nowrap ${look.italic ? "italic" : ""}`}
+              style={{ fontSize: "7.9cqw", letterSpacing: "-0.045em" }}
+            >
+              {look.lowercase ? look.bank.toLowerCase() : look.bank}
+            </span>
             {look.name && (
-              <span className="font-medium whitespace-nowrap opacity-70" style={{ fontSize: "3.6cqw" }}>
+              <span className="font-semibold whitespace-nowrap" style={{ fontSize: "3.8cqw", color: look.sub }}>
                 {look.name}
               </span>
             )}
           </div>
-          {badge && <Badge text={badge} />}
+          {badge && <Badge text={badge} color={look.sub} />}
         </div>
 
         {/* EMV chip */}

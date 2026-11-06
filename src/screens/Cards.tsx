@@ -44,11 +44,12 @@ export function Cards() {
   if (!pms.data) return <div className="flex flex-col gap-[22px]">{header}<Loading /></div>;
 
   // On phones the cards stack like a wallet: each one covers the previous,
-  // leaving a strip visible for the bank name + badge. The design uses 62px on
-  // a 350px-wide card; the card text scales with width, so the strip does too.
+  // leaving a strip visible for the wordmark, card name and badge: 90px on a
+  // 350px-wide card (the pastel wordmark is taller than the design's 62px strip
+  // allowed). The card text scales with width, so the strip does too.
   const stack = !desk;
   const cardHeight = stackWidth / 1.586;
-  const strip = (62 * stackWidth) / 350;
+  const strip = (90 * stackWidth) / 350;
   const overlap = Math.max(0, Math.round(cardHeight - strip));
   const open = (p: PaymentMethod) => navigate(`/cards/${p.id}`);
   // Twin cards (same name, different network) look alike in the stack, where

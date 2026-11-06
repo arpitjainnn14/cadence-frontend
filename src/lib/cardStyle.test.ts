@@ -42,6 +42,15 @@ describe("drawn card text", () => {
     expect(look).not.toHaveProperty("image");
     expect(look.bank).toBe("ICICI Bank");
     expect(look.name).toBe("Coral");
-    expect(look.bg).toMatch(/gradient/);
+    expect(look.bg).toBe("#f4b9a8"); // the wallet's pastel for Coral
+    expect(look.italic).toBe(true);
+  });
+
+  it("gives a picked colour, or an unknown card, a pastel mixed from that colour", () => {
+    const picked = cardLook({ ...pm("y", "Axis Magnus", "visa"), bank: "Axis", name: "Magnus", color: "#1E3A8A" });
+    expect(picked.bg).toBe("color-mix(in oklab, #1E3A8A 38%, #ffffff)");
+    expect(picked.ink).toContain("#1E3A8A");
+    const unknown = cardLook({ ...pm("z", "Some Bank Card", "visa"), bank: "Some Bank", name: "Card" });
+    expect(unknown.bg).toMatch(/^color-mix\(in oklab, #[0-9A-F]{6} 38%, #ffffff\)$/);
   });
 });
