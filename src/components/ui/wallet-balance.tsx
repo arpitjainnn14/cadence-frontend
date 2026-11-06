@@ -5,7 +5,10 @@
 // - an optional `total` prop (the whole monthly spend, not just the 3 cards)
 // - a richer pouch: leather grain, stitched seam (groove + thread), a lit
 //   pocket lip that casts a shadow onto the cards, deeper layered shadow,
-//   debossed total
+//   debossed total. All of it is cheap to draw on phones: the grain is a
+//   noise tile made once (no live SVG filter), the shadows are a box-shadow
+//   and a gradient (no CSS filters), and the squish only scales the pouch
+//   layers instead of rebuilding them.
 // - more motion: cards rise out of the pouch on first show, lift on hover and
 //   press, tuck in with a little bounce while the pouch squishes, and amounts
 //   count up when revealed. All of it is skipped with "reduce motion".
@@ -83,13 +86,39 @@ const STITCH_PATH = "M38 199C38 192 46 187 56 187L284 187C294 187 302 192 302 19
 // Pressed-into-leather look for the total.
 const DEBOSS = "0 -1px 0 rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.06)";
 
-/** Fine fractal noise used as a leather grain (blended over the pouch). */
-function GrainFilter({ id }: { id: string }) {
+/**
+ * Leather grain: a small tile of light and dark specks, drawn once on a canvas
+ * and reused as an SVG pattern. (A live feTurbulence filter looked the same
+ * but was recomputed on every redraw, which lagged on phones.)
+ */
+let noiseUrl: string | null = null;
+function noiseTile(): string {
+  if (noiseUrl !== null) return noiseUrl;
+  noiseUrl = "";
+  if (typeof document === "undefined") return noiseUrl;
+  const size = 256; // drawn at 2× the pattern size, so each speck is half a unit: a fine grain
+  const c = document.createElement("canvas");
+  c.width = c.height = size;
+  const ctx = c.getContext("2d");
+  if (!ctx) return noiseUrl;
+  const img = ctx.createImageData(size, size);
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const v = rnd() < 0.5 ? 0 : 255; // dark or light speck
+    img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+    img.data[i + 3] = Math.round(rnd() * 26); // up to ~10% opacity
+  }
+  ctx.putImageData(img, 0, 0);
+  noiseUrl = c.toDataURL("image/png");
+  return noiseUrl;
+}
+
+function GrainPattern({ id }: { id: string }) {
   return (
-    <filter id={id} x="0" y="0" width="100%" height="100%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves={2} seed={7} stitchTiles="stitch" />
-      <feColorMatrix type="saturate" values="0" />
-    </filter>
+    <pattern id={id} patternUnits="userSpaceOnUse" width={128} height={128}>
+      <image href={noiseTile()} width={128} height={128} />
+    </pattern>
   );
 }
 const MONO = 'var(--font-mono, "JetBrains Mono", ui-monospace, "SF Mono", "Space Mono", Menlo, Consolas, monospace)';
@@ -157,9 +186,10 @@ function Swap({
         <m.span
           key={show ? "value" : "mask"}
           className={`whitespace-nowrap ${show ? className : maskClassName || className}`}
-          initial={{ opacity: 0, filter: reduce ? "blur(0px)" : "blur(4px)" }}
-          animate={{ opacity: 1, filter: "blur(0px)" }}
-          exit={{ opacity: 0, filter: reduce ? "blur(0px)" : "blur(4px)" }}
+          // Opacity + a tiny slide (a blur here re-rasterised the text every frame on phones).
+          initial={{ opacity: 0, y: reduce ? 0 : 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: reduce ? 0 : -4 }}
           transition={{ duration: reduce ? 0 : 0.18, ease: EASE_OUT }}
         >
           {show ? value : mask}
@@ -280,10 +310,23 @@ export function WalletBalance({
     reduce
       ? { duration: 0 }
       : ({ type: "spring", duration: isVisible ? 0.6 : 0.55, bounce: isVisible ? 0.24 : 0.36, delay } as const);
-  // The pouch "receives" the cards: a small squash when they tuck in.
-  const squish = reduce
-    ? undefined
-    : { scaleY: [1, 0.968, 1.008, 1], transition: { duration: 0.5, delay: isVisible ? 0 : 0.12, ease: EASE_OUT } };
+  // The pouch "receives" the cards: a small squash on each toggle. Done by
+  // scaling the two pouch layers (a cheap GPU transform), not by remounting them.
+  const backRef = useRef<SVGSVGElement>(null);
+  const frontRef = useRef<SVGSVGElement>(null);
+  const firstToggle = useRef(true);
+  useEffect(() => {
+    if (firstToggle.current) {
+      firstToggle.current = false;
+      return;
+    }
+    if (reduce) return;
+    const opts = { duration: 0.5, delay: isVisible ? 0 : 0.12, ease: EASE_OUT };
+    const runs = [backRef.current, frontRef.current]
+      .filter((el): el is SVGSVGElement => !!el)
+      .map((el) => animate(el, { scaleY: [1, 0.968, 1.008, 1] }, opts));
+    return () => runs.forEach((r) => r.stop());
+  }, [isVisible, reduce]);
 
   return (
     <div
@@ -306,18 +349,28 @@ export function WalletBalance({
           opacity: scale === null ? 0 : 1,
         }}
       >
+        {/* Shadow under the pouch: a box-shadow on a pouch-shaped box (drawn once and cached). */}
+        <div
+          aria-hidden
+          className="absolute"
+          style={{
+            left: 20,
+            top: 96,
+            width: 300,
+            height: 286,
+            borderRadius: "18px 18px 66px 66px",
+            boxShadow: "0 26px 30px rgba(20,30,14,0.34), 0 6px 10px rgba(0,0,0,0.16)",
+          }}
+        />
+
         {/* Back of the pouch */}
-        <m.svg
-          key={isVisible ? "back-open" : "back-closed"}
+        <svg
+          ref={backRef}
           viewBox={`0 0 ${STAGE_W} ${STAGE_H}`}
           width={STAGE_W}
           height={STAGE_H}
           className="absolute inset-0"
-          style={{
-            filter: "drop-shadow(0 26px 30px rgba(20,30,14,0.34)) drop-shadow(0 6px 10px rgba(0,0,0,0.16))",
-            transformOrigin: "50% 100%",
-          }}
-          animate={mounted.current ? squish : undefined}
+          style={{ transformOrigin: "50% 100%", willChange: "transform" }}
           aria-hidden
         >
           <defs>
@@ -334,16 +387,16 @@ export function WalletBalance({
             <clipPath id={`${uid}-back-clip`}>
               <path d={BACK_PATH} />
             </clipPath>
-            <GrainFilter id={`${uid}-grain-back`} />
+            <GrainPattern id={`${uid}-grain-back`} />
           </defs>
           <path d={BACK_PATH} fill={`url(#${uid}-back)`} />
           <g clipPath={`url(#${uid}-back-clip)`}>
-            <rect x="0" y="0" width={STAGE_W} height={STAGE_H} filter={`url(#${uid}-grain-back)`} opacity={0.22} style={{ mixBlendMode: "overlay" }} />
+            <rect x="0" y="0" width={STAGE_W} height={STAGE_H} fill={`url(#${uid}-grain-back)`} />
             <rect x="20" y="96" width="300" height="70" fill={`url(#${uid}-depth)`} />
           </g>
           {/* rim highlight */}
           <path d={BACK_PATH} fill="none" stroke="rgba(255,255,255,0.07)" />
-        </m.svg>
+        </svg>
 
         {/* Cards */}
         {list.map((a, i) => {
@@ -396,16 +449,30 @@ export function WalletBalance({
           );
         })}
 
+        {/* The pocket's lip casts a soft shadow up onto the cards: a static gradient strip. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute"
+          style={{
+            left: 34,
+            width: 272,
+            top: POCKET_TOP - 16,
+            height: 18,
+            zIndex: 9,
+            background: "linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,0.24))",
+            WebkitMaskImage: "linear-gradient(to right, transparent, #000 10%, #000 90%, transparent)",
+            maskImage: "linear-gradient(to right, transparent, #000 10%, #000 90%, transparent)",
+          }}
+        />
+
         {/* Front pocket */}
-        <m.svg
-          key={isVisible ? "front-open" : "front-closed"}
+        <svg
+          ref={frontRef}
           viewBox={`0 0 ${STAGE_W} ${STAGE_H}`}
           width={STAGE_W}
           height={STAGE_H}
           className="pointer-events-none absolute inset-0"
-          // The pocket's lip casts a soft shadow up onto the cards.
-          style={{ zIndex: 10, filter: "drop-shadow(0 -6px 10px rgba(0,0,0,0.22))", transformOrigin: "50% 100%" }}
-          animate={mounted.current ? squish : undefined}
+          style={{ zIndex: 10, transformOrigin: "50% 100%", willChange: "transform" }}
           aria-hidden
         >
           <defs>
@@ -417,11 +484,11 @@ export function WalletBalance({
             <clipPath id={`${uid}-front-clip`}>
               <path d={FRONT_PATH} />
             </clipPath>
-            <GrainFilter id={`${uid}-grain-front`} />
+            <GrainPattern id={`${uid}-grain-front`} />
           </defs>
           <path d={FRONT_PATH} fill={`url(#${uid}-front)`} stroke="rgba(255,255,255,0.05)" />
           <g clipPath={`url(#${uid}-front-clip)`}>
-            <rect x="0" y="0" width={STAGE_W} height={STAGE_H} filter={`url(#${uid}-grain-front)`} opacity={0.24} style={{ mixBlendMode: "overlay" }} />
+            <rect x="0" y="0" width={STAGE_W} height={STAGE_H} fill={`url(#${uid}-grain-front)`} />
           </g>
           {/* lit lip along the top edge of the pocket */}
           <path
@@ -440,7 +507,7 @@ export function WalletBalance({
             strokeDasharray="4 3.2"
             strokeLinecap="round"
           />
-        </m.svg>
+        </svg>
 
         {/* Total + toggle (above the pocket) */}
         <div className="absolute inset-x-0 text-center" style={{ top: 191, zIndex: 11 }}>
