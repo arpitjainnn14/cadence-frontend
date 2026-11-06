@@ -6,6 +6,7 @@ import { LoadError, Loading, ScreenHeader, SectionTitle } from "../components/Sc
 import { RowGroup, SubRow } from "../components/SubRow";
 import { upcomingRow } from "../components/rowProps";
 import { WalletHero } from "../components/WalletHero";
+import { BudgetMeter } from "../components/BudgetMeter";
 import { usePaymentMethodMap, useSubscriptions, useSummary } from "../data/queries";
 import { longToday, toNum } from "../lib/format";
 import { dualText, usageOf } from "../lib/money";
@@ -114,13 +115,17 @@ export function Home() {
     <div className="flex animate-screen-in flex-col gap-7">
       {header}
       <div className="grid items-start gap-x-10 gap-y-8" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 350px), 1fr))" }}>
-        <WalletHero
-          monthly={{ inr: toNum(s.monthly), usd: toNum(usdTotals.monthly) }}
-          halfYearly={{ inr: toNum(s.half_yearly), usd: toNum(usdTotals.half_yearly) }}
-          yearly={{ inr: toNum(s.yearly), usd: toNum(usdTotals.yearly) }}
-          cards={walletCards}
-          onOpenCard={(id) => navigate(`/cards/${id}`)}
-        />
+        {/* Wallet with the totals, and the ₹ budget meter under it */}
+        <div className="flex flex-col gap-4">
+          <WalletHero
+            monthly={{ inr: toNum(s.monthly), usd: toNum(usdTotals.monthly) }}
+            halfYearly={{ inr: toNum(s.half_yearly), usd: toNum(usdTotals.half_yearly) }}
+            yearly={{ inr: toNum(s.yearly), usd: toNum(usdTotals.yearly) }}
+            cards={walletCards}
+            onOpenCard={(id) => navigate(`/cards/${id}`)}
+          />
+          <BudgetMeter budget={s.budget} hasUsd={!!s.usd} />
+        </div>
 
         {/* Upcoming renewals */}
         <section className="flex flex-col gap-[22px]">

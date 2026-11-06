@@ -13,7 +13,7 @@ npm test           # vitest
 npm run build      # type-check + production build into dist/
 ```
 
-In dev, the app talks to a **mock API** running in the browser (MSW), so no backend is needed. Any email and password signs you in, except the password `wrong` (shows the wrong-password state) and `limit` (shows the 15-minute rate-limit countdown). The mock data resets on every reload.
+In dev, the app talks to a **mock API** running in the browser (MSW), so no backend is needed. Any email and password signs you in, except the password `wrong` (shows the wrong-password state) and `limit` (shows the 15-minute rate-limit countdown). In Settings > Change password, a current password of `wrong` gives "incorrect" and `limit` gives the lock. The mock data, including the ₹3,000 sample budget and the generated card art, resets on every reload.
 
 To use the real backend instead:
 

@@ -13,6 +13,7 @@ export const keys = {
   subscriptions: ["subscriptions"] as const,
   summary: ["summary"] as const,
   insights: (p: Period) => ["insights", p] as const,
+  settings: ["settings"] as const,
 };
 
 export function makeQueryClient() {
@@ -61,6 +62,7 @@ export const useSubscriptions = () => useQuery({ queryKey: keys.subscriptions, q
 export const useSummary = () => useQuery({ queryKey: keys.summary, queryFn: api.summary });
 export const useInsights = (period: Period) =>
   useQuery({ queryKey: keys.insights(period), queryFn: () => api.insights(period) });
+export const useSettings = () => useQuery({ queryKey: keys.settings, queryFn: api.settings });
 
 /** Lookup helper: payment method by id. */
 export function usePaymentMethodMap(): Map<string, PaymentMethod> {
@@ -136,4 +138,23 @@ export function useLogin() {
 export function useLogout(): () => void {
   const qc = useQueryClient();
   return () => signOut(qc, api.logout);
+}
+
+/** Set (or clear, with null) the monthly ₹ budget. Home's budget meter comes from the summary, so refresh it too. */
+export function useUpdateBudget() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (monthly_budget_inr: string | null) => api.updateSettings({ monthly_budget_inr }),
+    onSuccess: (data) => {
+      qc.setQueryData(keys.settings, data);
+      return qc.invalidateQueries({ queryKey: keys.summary });
+    },
+  });
+}
+
+/** Change password. On success the backend sets new cookies here (we stay signed in) and signs out other devices. */
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: ({ current, next }: { current: string; next: string }) => api.changePassword(current, next),
+  });
 }
