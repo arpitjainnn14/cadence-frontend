@@ -10,6 +10,8 @@ import { CATEGORY_COLOR, RANK_PALETTE } from "../lib/categories";
 import { CYCLES } from "../lib/cycles";
 import { groupINR, price, toNum } from "../lib/format";
 import { useUi } from "../ui/UiContext";
+import { useTheme } from "../ui/theme";
+import { cardLook } from "../lib/cardStyle";
 import { usdText } from "../lib/money";
 
 type View = "cat" | "pay" | "top";
@@ -32,6 +34,17 @@ export function Insights() {
   const insights = useInsights(period);
   const subs = useSubscriptions();
   const labels = usePaymentLabels();
+  const pmById = usePaymentMethodMap();
+  const { dark } = useTheme();
+  // "By card" slices use each card's own pastel (the colour of its card face).
+  // On the light theme pale pastels (GPay, CRED) would fade into the white
+  // panel, so they're deepened a little towards the card's ink colour.
+  const cardColor = (id: string | null, i: number) => {
+    const pm = id ? pmById.get(id) : undefined;
+    if (!pm) return id ? RANK_PALETTE[i % RANK_PALETTE.length] : "var(--color-fg3)";
+    const look = cardLook(pm);
+    return dark ? look.bg : `color-mix(in oklab, ${look.bg} 72%, ${look.ink})`;
+  };
 
   const header = <ScreenHeader eyebrow="Active subscriptions only" title="Insights" />;
 
@@ -90,7 +103,7 @@ export function Insights() {
                 key: p.payment_method_id ?? "none",
                 label: p.payment_method_id ? (labels.get(p.payment_method_id) ?? p.name) : "Unassigned",
                 value: toNum(p.amount),
-                color: RANK_PALETTE[i % RANK_PALETTE.length],
+                color: cardColor(p.payment_method_id, i),
               },
               ids: p.subscription_ids,
             }))}
