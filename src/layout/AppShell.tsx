@@ -95,12 +95,8 @@ function Dock() {
     >
       <nav
         aria-label="Main"
-        className="pointer-events-auto relative h-[60px] max-w-[288px] flex-1 rounded-[30px] bg-dock p-[5px]"
-        style={{
-          backdropFilter: "blur(24px) saturate(1.6)",
-          WebkitBackdropFilter: "blur(24px) saturate(1.6)",
-          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.10), inset 0 0 0 1px var(--color-hair), 0 12px 30px -12px rgba(0,0,0,0.55)",
-        }}
+        // Liquid glass (index.css): frosted body, specular rim, depth.
+        className="liquid-glass pointer-events-auto relative h-[60px] max-w-[288px] flex-1 rounded-[30px] p-[5px]"
       >
         <DockTabs index={ti} onPick={(i) => navigate(TABS[i].to)} />
       </nav>
@@ -108,7 +104,7 @@ function Dock() {
         type="button"
         aria-label="New subscription"
         onClick={() => openSubscription()}
-        className="pointer-events-auto grid h-[60px] w-[60px] flex-none place-items-center rounded-[30px] border-none bg-inv text-invfg shadow-[0_12px_30px_-10px_rgba(0,0,0,0.6)] transition-transform duration-250 active:scale-[0.92]"
+        className="glass-rim pointer-events-auto relative grid h-[60px] w-[60px] flex-none place-items-center rounded-[30px] border-none bg-inv text-invfg shadow-[inset_0_1px_1px_rgba(255,255,255,0.35),inset_0_-2px_4px_rgba(0,0,0,0.25),0_12px_30px_-10px_rgba(0,0,0,0.6)] transition-transform duration-250 active:scale-[0.92]"
       >
         <PlusIcon size={24} />
       </button>
@@ -134,15 +130,17 @@ function DockTabs({ index, onPick }: { index: number; onPick: (i: number) => voi
   const lag = ".62s cubic-bezier(.3,1.25,.4,1) .05s";
 
   const gridRef = useRef<HTMLDivElement>(null);
-  const press = useRef<{ id: number; x0: number; moved: boolean } | null>(null);
+  const press = useRef<{ id: number; x0: number; moved: boolean; lastX: number; lastT: number } | null>(null);
   const suppressClick = useRef(false);
-  const [drag, setDrag] = useState<{ x: number; w: number; hover: number } | null>(null);
+  // `stretch` > 1 while the finger moves fast: the bubble elongates like liquid, then settles.
+  const [drag, setDrag] = useState<{ x: number; w: number; hover: number; stretch: number } | null>(null);
+  const settle = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const tabAt = (x: number, w: number) => Math.min(n - 1, Math.max(0, Math.floor((x / w) * n)));
 
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
     if (e.pointerType === "mouse" && e.button !== 0) return;
-    press.current = { id: e.pointerId, x0: e.clientX, moved: false };
+    press.current = { id: e.pointerId, x0: e.clientX, moved: false, lastX: e.clientX, lastT: e.timeStamp };
   }
 
   function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
@@ -157,10 +155,17 @@ function DockTabs({ index, onPick }: { index: number; onPick: (i: number) => voi
     const r = el.getBoundingClientRect();
     const x = Math.min(r.width, Math.max(0, e.clientX - r.left));
     const hover = tabAt(x, r.width);
+    const speed = Math.abs(e.clientX - p.lastX) / Math.max(1, e.timeStamp - p.lastT); // px per ms
+    p.lastX = e.clientX;
+    p.lastT = e.timeStamp;
+    const stretch = Math.min(1.28, 1 + speed * 0.18);
     setDrag((d) => {
       if (d && d.hover !== hover) navigator.vibrate?.(8);
-      return { x, w: r.width, hover };
+      return { x, w: r.width, hover, stretch };
     });
+    // Finger stopped: let the bubble round up again.
+    if (settle.current) clearTimeout(settle.current);
+    settle.current = setTimeout(() => setDrag((d) => (d ? { ...d, stretch: 1 } : d)), 90);
   }
 
   function onPointerEnd(e: React.PointerEvent<HTMLDivElement>) {
@@ -170,6 +175,7 @@ function DockTabs({ index, onPick }: { index: number; onPick: (i: number) => voi
     suppressClick.current = true; // the click that follows a drag isn't a tap
     setTimeout(() => (suppressClick.current = false), 0);
     const d = drag;
+    if (settle.current) clearTimeout(settle.current);
     setDrag(null);
     if (d && e.type === "pointerup" && d.hover !== index) onPick(d.hover);
   }
@@ -194,24 +200,25 @@ function DockTabs({ index, onPick }: { index: number; onPick: (i: number) => voi
       {showPill && (
         <div
           aria-hidden
-          className="absolute top-0 bottom-0 rounded-[25px] bg-glass shadow-glass"
+          // A brighter liquid-glass lens inside the glass dock.
+          className="liquid-glass absolute top-0 bottom-0 rounded-[25px]"
           style={
-            drag
-              ? {
-                  left: dragLeft,
-                  width: pillW,
-                  transform: "scale(1.08)",
-                  transition: "transform .2s cubic-bezier(.3,1.3,.45,1)",
-                  backdropFilter: "blur(8px) saturate(1.8)",
-                  WebkitBackdropFilter: "blur(8px) saturate(1.8)",
-                }
-              : {
-                  left: `calc(${index} * ${unit})`,
-                  right: `calc(${n - 1 - index} * ${unit})`,
-                  transition: dir > 0 ? `right ${lead}, left ${lag}, transform .3s` : dir < 0 ? `left ${lead}, right ${lag}, transform .3s` : "left .4s, right .4s, transform .3s",
-                  backdropFilter: "blur(8px) saturate(1.8)",
-                  WebkitBackdropFilter: "blur(8px) saturate(1.8)",
-                }
+            {
+              "--lg-tint": "var(--lg-tint-strong)",
+              ...(drag
+                ? {
+                    left: dragLeft,
+                    width: pillW,
+                    // Lifted while held; stretched along the drag when moving fast.
+                    transform: `scaleX(${(1.1 * drag.stretch).toFixed(3)}) scaleY(${(1.1 / Math.sqrt(drag.stretch)).toFixed(3)})`,
+                    transition: "transform .22s cubic-bezier(.3,1.4,.45,1)",
+                  }
+                : {
+                    left: `calc(${index} * ${unit})`,
+                    right: `calc(${n - 1 - index} * ${unit})`,
+                    transition: dir > 0 ? `right ${lead}, left ${lag}, transform .3s` : dir < 0 ? `left ${lead}, right ${lag}, transform .3s` : "left .4s, right .4s, transform .3s",
+                  }),
+            } as unknown as React.CSSProperties
           }
         />
       )}

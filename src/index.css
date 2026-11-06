@@ -93,6 +93,19 @@
   @keyframes spin {
     to { transform: rotate(360deg); }
   }
+  /* Splash: pastel blobs drifting gently around their spots behind the glass pane. */
+  @keyframes driftA {
+    0% { transform: translate(-50%, -50%) scale(1); }
+    100% { transform: translate(-20%, -75%) scale(1.15); }
+  }
+  @keyframes driftB {
+    0% { transform: translate(-50%, -50%) scale(1.05); }
+    100% { transform: translate(-80%, -30%) scale(0.9); }
+  }
+  @keyframes driftC {
+    0% { transform: translate(-50%, -50%) scale(0.95); }
+    100% { transform: translate(-30%, -25%) scale(1.15); }
+  }
   @keyframes shrink {
     from { transform: scaleX(1); }
     to { transform: scaleX(0); }
@@ -110,6 +123,14 @@
     0 6px 16px -4px rgba(0, 0, 0, 0.45);
   --menu: 0 0 0 1px var(--color-hair2), 0 18px 40px -12px rgba(0, 0, 0, 0.6);
   --logo-dot: #f2a65a; /* logo 1b, dark */
+  /* Liquid glass (see @utility liquid-glass) */
+  --lg-tint: rgba(255, 255, 255, 0.05);
+  --lg-tint-strong: rgba(255, 255, 255, 0.16);
+  --lg-rim-hi: rgba(255, 255, 255, 0.55);
+  --lg-rim-lo: rgba(255, 255, 255, 0.1);
+  --lg-inner: inset 0 1px 0.5px rgba(255, 255, 255, 0.32), inset 0 -1px 1px rgba(0, 0, 0, 0.3),
+    inset 0 0 20px rgba(255, 255, 255, 0.05);
+  --lg-drop: 0 18px 40px -14px rgba(0, 0, 0, 0.75), 0 2px 6px rgba(0, 0, 0, 0.3);
   color-scheme: dark;
 }
 
@@ -135,6 +156,13 @@
   --glass-hi: 0 2px 8px -1px rgba(0, 0, 0, 0.14), inset 0 0 0 0.5px rgba(0, 0, 0, 0.05);
   --menu: 0 0 0 1px var(--color-hair2), 0 18px 40px -12px rgba(0, 0, 0, 0.18);
   --logo-dot: #c76a1e; /* logo 1b, light */
+  --lg-tint: rgba(255, 255, 255, 0.42);
+  --lg-tint-strong: rgba(255, 255, 255, 0.92);
+  --lg-rim-hi: rgba(255, 255, 255, 1);
+  --lg-rim-lo: rgba(255, 255, 255, 0.35);
+  --lg-inner: inset 0 1px 0.5px rgba(255, 255, 255, 0.95), inset 0 -1px 1px rgba(0, 0, 0, 0.06),
+    inset 0 0 20px rgba(255, 255, 255, 0.4);
+  --lg-drop: 0 18px 40px -16px rgba(0, 0, 0, 0.28), 0 2px 6px rgba(0, 0, 0, 0.08);
   color-scheme: light;
 }
 
@@ -146,6 +174,59 @@
 }
 @utility shadow-menu {
   box-shadow: var(--menu);
+}
+
+/*
+ * Liquid glass, after iOS 26: a frosted, colour-boosted body with a sheen
+ * from the top, a specular rim that catches light on two corners (the
+ * ::before ring), an inner highlight/shadow for thickness and a soft drop
+ * shadow. Built from blur + gradients rather than SVG refraction, which
+ * Safari can't apply behind an element. The element needs its own
+ * `position` (relative/absolute) and a border-radius. Set --lg-tint to
+ * --lg-tint-strong for a brighter lens (e.g. the dock's moving bubble).
+ */
+@utility liquid-glass {
+  isolation: isolate;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0) 55%), var(--lg-tint);
+  backdrop-filter: blur(18px) saturate(1.9) brightness(1.05);
+  -webkit-backdrop-filter: blur(18px) saturate(1.9) brightness(1.05);
+  box-shadow: var(--lg-inner), var(--lg-drop);
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      135deg,
+      var(--lg-rim-hi),
+      var(--lg-rim-lo) 28%,
+      transparent 50%,
+      var(--lg-rim-lo) 72%,
+      var(--lg-rim-hi)
+    );
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+}
+
+/* The same rim and thickness on a solid element (e.g. the dock's + button). */
+@utility glass-rim {
+  isolation: isolate;
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.08) 35%, transparent 55%, rgba(255, 255, 255, 0.35));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
 }
 
 @layer base {
