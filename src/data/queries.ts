@@ -118,14 +118,6 @@ export function useUpdateCard() {
   });
 }
 
-export function useSetCardImage() {
-  const refresh = useRefreshAll();
-  return useMutation({
-    mutationFn: ({ id, file }: { id: string; file: File }) => api.setPaymentMethodImage(id, file),
-    onSuccess: refresh,
-  });
-}
-
 export function useLogin() {
   const qc = useQueryClient();
   return useMutation({

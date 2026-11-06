@@ -1,7 +1,6 @@
-// How each payment method looks when it has no uploaded card art.
+// How each payment method's drawn card looks (uploaded card art isn't used).
 // Seeded cards get the hand-picked gradients from the design; anything else
 // gets a gradient derived from a stable hash of its name.
-import { api } from "../api/endpoints";
 import type { Network, PaymentMethod } from "../api/types";
 
 export interface CardLook {
@@ -14,8 +13,6 @@ export interface CardLook {
   fg?: string;
   /** Small brand-colour square next to the bank name. */
   dot?: string;
-  /** URL of uploaded card art, if any. */
-  image?: string;
   /** Square tile colours for UPI apps. */
   tile?: string;
   tileFg?: string;
@@ -68,6 +65,20 @@ export function toneGradient(tone: string): string {
   return `linear-gradient(135deg,color-mix(in oklab,${tone} 70%,white) 0%,${tone} 50%,color-mix(in oklab,${tone} 50%,black) 100%)`;
 }
 
+/**
+ * The second line on a drawn card. The bank is already on the first line, so
+ * don't repeat it: "HDFC" + "HDFC Regalia" shows "Regalia", and a name that is
+ * just the bank ("slice" / "slice") shows nothing.
+ */
+export function cardName(bank: string | null, name: string): string {
+  if (!bank) return "";
+  const b = bank.trim().toLowerCase();
+  const n = name.trim();
+  if (n.toLowerCase() === b) return "";
+  if (n.toLowerCase().startsWith(b + " ")) return n.slice(b.length).trim();
+  return n;
+}
+
 export function cardLook(pm: PaymentMethod): CardLook {
   const key = pm.display_name.toLowerCase();
   const preset = PRESETS[`${key}|${pm.network}`] ?? PRESETS[key] ?? {};
@@ -78,7 +89,7 @@ export function cardLook(pm: PaymentMethod): CardLook {
   return {
     kind: upi ? "upi" : "card",
     bank: upi ? pm.name : (BANK_ON_CARD[(pm.bank ?? "").toLowerCase()] ?? pm.bank ?? pm.name),
-    name: upi ? "UPI AutoPay" : pm.bank && pm.bank !== pm.name ? pm.name : "",
+    name: upi ? "UPI AutoPay" : cardName(pm.bank, pm.name),
     network: pm.network,
     bg: toneGradient(tone),
     tile: tone,
@@ -86,7 +97,6 @@ export function cardLook(pm: PaymentMethod): CardLook {
     mark: pm.name.replace(/[^A-Za-z]/g, "").slice(0, 1).toUpperCase(),
     ...preset,
     ...chosen,
-    image: pm.has_image ? api.paymentMethodImageUrl(pm.id) : undefined,
   };
 }
 
@@ -96,9 +106,7 @@ export const CARD_COLORS = ["#1E3A8A", "#0F4C46", "#5B21B6", "#7F1D1D", "#3F3F46
 /** Thumbnail background for list rows and menus. */
 export function thumbBg(pm: PaymentMethod | undefined | null): string {
   if (!pm) return "var(--color-s3)";
-  const look = cardLook(pm);
-  // Real art is transparent and may be portrait: show it whole, no backdrop.
-  return look.image ? `center / contain no-repeat url("${look.image}")` : look.bg;
+  return cardLook(pm).bg;
 }
 
 export const NETWORK_LABEL: Record<string, string> = { visa: "Visa", mastercard: "Mastercard", rupay: "RuPay" };

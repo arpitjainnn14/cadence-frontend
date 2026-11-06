@@ -1,4 +1,3 @@
-import { useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/endpoints";
 import { Link, useNavigate, useParams } from "react-router";
@@ -7,13 +6,12 @@ import { ChevronLeft } from "../components/Icons";
 import { Loading, SectionTitle } from "../components/ScreenHeader";
 import { RowGroup, SubRow } from "../components/SubRow";
 import { subscriptionRow } from "../components/rowProps";
-import { usePaymentLabels, usePaymentMethods, useSetCardImage, useSubscriptions, useUpdateCard } from "../data/queries";
+import { usePaymentLabels, usePaymentMethods, useSubscriptions, useUpdateCard } from "../data/queries";
 import { cardLook } from "../lib/cardStyle";
 import { toNum } from "../lib/format";
 import { monthlyTotals, scaleDual } from "../lib/money";
 import { DualAmount } from "../components/DualAmount";
 import { useUi } from "../ui/UiContext";
-import { checkImage } from "./AddCardSheet";
 
 const STATUS_ORDER = { active: 0, paused: 1, cancelled: 2 } as const;
 
@@ -23,10 +21,8 @@ export function CardDetail() {
   const pms = usePaymentMethods();
   const labels = usePaymentLabels();
   const subs = useSubscriptions();
-  const setImage = useSetCardImage();
   const update = useUpdateCard();
   const { openSubscription, toast } = useUi();
-  const fileRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
   const back = (
@@ -60,15 +56,6 @@ export function CardDetail() {
     );
   const monthly = monthlyTotals(rows);
   const activeCount = rows.filter((s) => s.status === "active").length;
-
-  function onFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    const problem = checkImage(file);
-    if (problem) return toast(problem);
-    setImage.mutate({ id: pm!.id, file }, { onSuccess: () => toast("Card art updated"), onError: (err) => toast(err.message) });
-  }
 
   function deactivate() {
     update.mutate(
@@ -137,21 +124,12 @@ export function CardDetail() {
           <div className="flex justify-center gap-5 pt-3">
             <button
               type="button"
-              onClick={() => fileRef.current?.click()}
-              disabled={setImage.isPending}
-              className="border-none bg-transparent p-0 text-[13px] text-fg3 hover:text-fg2 disabled:opacity-60"
-            >
-              {setImage.isPending ? "Uploading…" : pm.has_image ? "Change card art" : "Upload card art"}
-            </button>
-            <button
-              type="button"
               onClick={deactivate}
               disabled={update.isPending}
               className="border-none bg-transparent p-0 text-[13px] text-fg3 hover:text-fg2"
             >
               Hide this {pm.type === "upi" ? "app" : "card"}
             </button>
-            <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={onFile} className="hidden" />
           </div>
         </div>
       </div>

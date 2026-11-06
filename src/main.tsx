@@ -14,8 +14,6 @@ async function start() {
     // own service worker, so we don't register sw.js in mock mode: two
     // workers can't both control the same scope.
     const { worker } = await import("./mocks/browser");
-    const { seedMockArt } = await import("./mocks/art");
-    await seedMockArt(); // fake transparent card art, portrait and landscape
     await worker.start({ onUnhandledRequest: "bypass", quiet: true });
   } else if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("/sw.js").catch(() => undefined);

@@ -1,14 +1,8 @@
 // Drawn credit card / UPI card from CardArt.dc.html ("gradient" variant).
 // Sizes use container-query units (cqw) so the card scales with its width,
-// exactly like the design.
-//
-// If the card has uploaded art, we show ONLY that art (plus the spend badge):
-// real card art already has its own bank name, chip and network logo, so
-// drawing ours on top would print everything twice. The art is transparent
-// and can be portrait or landscape, so it's shown whole (object-fit: contain),
-// upright and centred, never cropped. If the image fails to load, we fall back
-// to the drawn card, which includes the card's name.
-import { useEffect, useState, type CSSProperties } from "react";
+// exactly like the design. Every card is drawn (bank colour or the colour you
+// picked, bank + card name, chip, network); uploaded card art isn't used.
+import type { CSSProperties } from "react";
 import type { CardLook } from "../lib/cardStyle";
 
 interface Props {
@@ -16,96 +10,43 @@ interface Props {
   /** Small pill in the top-right, e.g. "₹1,233/mo". */
   badge?: string;
   selected?: boolean;
-  /** Width/height of the slot the art sits in. Defaults to a card's 1.586. */
-  slot?: number;
 }
 
-export function CardArt({ look, badge, selected, slot = 1.586 }: Props) {
-  const upi = look.kind === "upi";
-  const [broken, setBroken] = useState(false);
-  useEffect(() => setBroken(false), [look.image]);
-  const showImage = !!look.image && !broken;
-  const ring = selected ? "2px solid var(--color-fg)" : "2px solid transparent";
-
+export function CardArt({ look, badge, selected }: Props) {
   return (
     // text-left: cards often sit inside a <button>, which centres text by default.
     <div className="w-full text-left" style={{ containerType: "inline-size" }}>
-      {showImage ? (
-        // The slot keeps the usual card shape so grids and stacks line up; the
-        // art sits inside it at its own shape, with no background behind it.
-        <div className="relative flex w-full items-center justify-center" style={{ aspectRatio: String(slot) }}>
-          {/* Wrapper hugs the image, so the badge and selection ring sit on the card itself. */}
-          <div
-            className="relative inline-flex"
-            style={{ borderRadius: "4cqw", outline: ring, outlineOffset: 3, transition: "outline-color .2s" }}
-          >
-            {/* Scale the art to fit the slot whatever its shape: the slot is
-                100cqw wide and 100/slot cqw tall (cqw = 1% of the slot width). */}
-            <img
-              src={look.image}
-              alt=""
-              draggable={false}
-              onError={() => setBroken(true)}
-              className="block h-auto w-auto select-none"
-              style={{
-                maxWidth: "100cqw",
-                maxHeight: `${100 / slot}cqw`,
-                // Shadow in cqw so it scales with the card: soft on big cards,
-                // not a blurry smudge on small thumbnails (e.g. "Paid with").
-                filter: "drop-shadow(0 3.4cqw 5cqw rgba(0,0,0,0.30)) drop-shadow(0 0.6cqw 1.2cqw rgba(0,0,0,0.18))",
-              }}
-            />
-            {badge && <Badge text={badge} onImage />}
-          </div>
-        </div>
-      ) : (
-        <SlotFrame slot={slot}>
-        <div
-          className="relative w-full overflow-hidden"
-          style={{
-            aspectRatio: "1.586",
-            borderRadius: "5cqw",
-            background: look.bg,
-            color: look.fg ?? "#fff",
-            boxShadow:
-              "inset 0 1px 0 rgba(255,255,255,0.12), inset 0 0 0 1px rgba(255,255,255,0.06), 0 22px 44px -22px rgba(0,0,0,0.7), 0 2px 6px rgba(0,0,0,0.25)",
-            outline: ring,
-            outlineOffset: 3,
-            transition: "outline-color .2s",
-          }}
-        >
-          <DrawnFace look={look} upi={upi} badge={badge} />
-        </div>
-        </SlotFrame>
-      )}
+      <div
+        className="relative w-full overflow-hidden"
+        style={{
+          aspectRatio: "1.586",
+          borderRadius: "5cqw",
+          background: look.bg,
+          color: look.fg ?? "#fff",
+          boxShadow:
+            "inset 0 1px 0 rgba(255,255,255,0.12), inset 0 0 0 1px rgba(255,255,255,0.06), 0 22px 44px -22px rgba(0,0,0,0.7), 0 2px 6px rgba(0,0,0,0.25)",
+          outline: selected ? "2px solid var(--color-fg)" : "2px solid transparent",
+          outlineOffset: 3,
+          transition: "outline-color .2s",
+        }}
+      >
+        <DrawnFace look={look} upi={look.kind === "upi"} badge={badge} />
+      </div>
     </div>
   );
 }
 
-/** Centres a card-shaped drawing in a differently shaped slot (e.g. the square slots of the phone grid). */
-function SlotFrame({ slot, children }: { slot: number; children: React.ReactNode }) {
-  if (slot === 1.586) return <>{children}</>;
-  return (
-    <div className="flex w-full items-center" style={{ aspectRatio: String(slot) }}>
-      {children}
-    </div>
-  );
-}
-
-/** Spend pill in the top-right corner. On photos it gets a stronger backdrop so it stays readable. */
-function Badge({ text, onImage = false }: { text: string; onImage?: boolean }) {
+/** Spend pill in the top-right corner. */
+function Badge({ text }: { text: string }) {
   return (
     <span
       className="font-semibold whitespace-nowrap tabular-nums"
       style={{
-        ...(onImage ? { position: "absolute", top: "4cqw", right: "4cqw", color: "#fff" } : {}),
-        // On small art (e.g. the phone grid) cqw gets tiny, so keep at least 11px.
+        // On small cards cqw gets tiny, so keep at least 11px.
         fontSize: "max(11px, 4.2cqw)",
         padding: "1.2cqw 2.6cqw",
         borderRadius: 99,
-        background: onImage ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0.24)",
-        backdropFilter: onImage ? "blur(6px)" : undefined,
-        WebkitBackdropFilter: onImage ? "blur(6px)" : undefined,
+        background: "rgba(0,0,0,0.24)",
       }}
     >
       {text}
@@ -226,8 +167,7 @@ export function CardThumb({ bg, title, w = 24 }: { bg: string; title?: string; w
         width: w,
         height: Math.round(w / 1.6),
         background: bg,
-        // Drawn thumbnails get a hairline edge; real (transparent) art doesn't need one.
-        boxShadow: bg.includes("url(") ? "none" : "inset 0 0 0 1px rgba(255,255,255,0.16), 0 1px 2px rgba(0,0,0,0.3)",
+        boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.16), 0 1px 2px rgba(0,0,0,0.3)",
       }}
     />
   );

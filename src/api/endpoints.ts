@@ -29,12 +29,6 @@ export const api = {
     apiFetch<PaymentMethod>("/api/payment-methods", { method: "POST", form }),
   updatePaymentMethod: (id: string, patch: Partial<Pick<PaymentMethod, "bank" | "name" | "network" | "is_active" | "color">>) =>
     apiFetch<PaymentMethod>(`/api/payment-methods/${id}`, { method: "PATCH", json: patch }),
-  setPaymentMethodImage: (id: string, image: File) => {
-    const form = new FormData();
-    form.append("image", image);
-    return apiFetch<PaymentMethod>(`/api/payment-methods/${id}/image`, { method: "PUT", form });
-  },
-  paymentMethodImageUrl: (id: string) => `/api/payment-methods/${id}/image`,
 
   // Merchants
   resolveMerchant: (name: string, signal?: AbortSignal) =>

@@ -129,7 +129,6 @@ export const handlers = [
     if (!name) return err(422, [{ loc: ["body", "name"], msg: "Field required" }]);
     const color = (form.get("color") as string) || null;
     if (color && !/^#[0-9A-Fa-f]{6}$/.test(color)) return err(422, [{ loc: ["body", "color"], msg: "must be a #RRGGBB colour" }]);
-    const image = form.get("image");
     const item = {
       id: uuid(),
       type: (form.get("type") as "credit_card") ?? "credit_card",
@@ -137,11 +136,10 @@ export const handlers = [
       name,
       network: ((form.get("network") as string) || null) as "visa" | null,
       display_name: displayName(bank, name),
-      has_image: image instanceof File && image.size > 0,
+      has_image: false, // card art isn't used by the app
       is_active: true,
       color,
     };
-    if (item.has_image) db.images.set(item.id, image as File);
     db.paymentMethods.push(item);
     return HttpResponse.json(item, { status: 201 });
   }),
@@ -153,24 +151,6 @@ export const handlers = [
     Object.assign(item, await request.json());
     item.display_name = displayName(item.bank, item.name);
     return HttpResponse.json(item);
-  }),
-  http.put("/api/payment-methods/:id/image", async ({ request, params }) => {
-    const g = guard(request);
-    if (g) return g;
-    const item = pmById(params.id as string);
-    if (!item) return err(404, "Not found");
-    const image = (await request.formData()).get("image");
-    if (!(image instanceof File) || !["image/png", "image/jpeg", "image/webp"].includes(image.type) || image.size > 2 * 1024 * 1024) {
-      return err(422, "Image must be PNG, JPEG or WebP, up to 2 MB");
-    }
-    db.images.set(item.id, image);
-    item.has_image = true;
-    return HttpResponse.json(item);
-  }),
-  http.get("/api/payment-methods/:id/image", ({ params }) => {
-    const blob = db.images.get(params.id as string);
-    if (!blob) return err(404, "No image");
-    return new HttpResponse(blob, { headers: { "Content-Type": blob.type } });
   }),
 
   // ---------- merchants ----------

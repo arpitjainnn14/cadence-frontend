@@ -106,8 +106,3 @@ export const ThemeIcon = (p: P) => (
     <path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" />
   </Svg>
 );
-export const UploadIcon =(p: P) => (
-  <Svg weight={1.9} {...p}>
-    <path d="M12 16V4M7 9l5-5 5 5M5 20h14" />
-  </Svg>
-);

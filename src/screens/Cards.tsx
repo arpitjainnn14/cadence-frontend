@@ -4,7 +4,7 @@ import { CardArt } from "../components/CardArt";
 import { PlusIcon } from "../components/Icons";
 import { LoadError, Loading, ScreenHeader, SectionTitle } from "../components/ScreenHeader";
 import { usePaymentLabels, usePaymentMethods, useSubscriptions } from "../data/queries";
-import { cardLook } from "../lib/cardStyle";
+import { cardLook, NETWORK_LABEL, type CardLook } from "../lib/cardStyle";
 import { dualText, usageOf } from "../lib/money";
 import { plural } from "../lib/format";
 import { useUi } from "../ui/UiContext";
@@ -46,15 +46,20 @@ export function Cards() {
   // On phones the cards stack like a wallet: each one covers the previous,
   // leaving a strip visible for the bank name + badge. The design uses 62px on
   // a 350px-wide card; the card text scales with width, so the strip does too.
-  // Phones show the design's overlapping wallet stack, but only when every card
-  // is drawn: real art is transparent and some of it is portrait, so it can't
-  // cover the card behind it. With any real art we use a two-column grid with
-  // square slots, where portrait and landscape cards come out a similar size.
-  const stack = !desk && !cards.some((p) => p.has_image);
+  const stack = !desk;
   const cardHeight = stackWidth / 1.586;
   const strip = (62 * stackWidth) / 350;
   const overlap = Math.max(0, Math.round(cardHeight - strip));
   const open = (p: PaymentMethod) => navigate(`/cards/${p.id}`);
+  // Twin cards (same name, different network) look alike in the stack, where
+  // the network mark is hidden under the next card, so name the network on
+  // the second line: "Sapphiro · RuPay".
+  const lookFor = (p: PaymentMethod): CardLook => {
+    const look = cardLook(p);
+    const twin = cards.some((o) => o.id !== p.id && o.display_name === p.display_name);
+    if (!twin || !p.network) return look;
+    return { ...look, name: [look.name, NETWORK_LABEL[p.network]].filter(Boolean).join(" · ") };
+  };
 
   return (
     <div className="flex animate-screen-in flex-col gap-[22px]">
@@ -66,7 +71,7 @@ export function Cards() {
       ) : (
         <div
           ref={stackRef}
-          className={stack ? "flex flex-col" : desk ? "grid gap-[22px]" : "grid grid-cols-2 gap-x-3.5 gap-y-5"}
+          className={stack ? "flex flex-col" : "grid gap-[22px]"}
           style={desk ? { gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))" } : undefined}
         >
           {cards.map((p, i) => {
@@ -80,7 +85,7 @@ export function Cards() {
                 className="relative block w-full border-none bg-transparent p-0 transition-transform duration-450 hover:-translate-y-2.5 active:scale-[0.98]"
                 style={{ marginTop: stack && i ? -overlap : 0, transitionTimingFunction: "cubic-bezier(.3,1.3,.4,1)" }}
               >
-                <CardArt look={cardLook(p)} badge={u.count ? `${dualText(u.monthly)}/mo` : undefined} slot={stack || desk ? undefined : 1.25} />
+                <CardArt look={lookFor(p)} badge={u.count ? `${dualText(u.monthly)}/mo` : undefined} />
               </button>
             );
           })}

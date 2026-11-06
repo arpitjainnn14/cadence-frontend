@@ -33,7 +33,6 @@ const pm = (
 });
 
 export const db = {
-  images: new Map<string, Blob>(),
   paymentMethods: [
     pm("credit_card", "HDFC Bank", "MoneyBack+", "visa"),
     pm("credit_card", "ICICI", "Sapphiro", "rupay"),

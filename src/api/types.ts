@@ -43,6 +43,7 @@ export interface PaymentMethod {
   name: string;
   network: Network;
   display_name: string;
+  /** Unused by the app: every card is drawn, card art is never fetched. */
   has_image: boolean;
   is_active: boolean;
   /** "#RRGGBB" chosen in Add card, or null = the frontend picks a colour. */
