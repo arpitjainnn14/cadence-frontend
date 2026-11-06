@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router";
 import { EmptyState } from "../components/EmptyState";
 import { BellIcon, ThemeIcon } from "../components/Icons";
@@ -20,6 +21,7 @@ export function Home() {
   const { openSubscription } = useUi();
   const desk = useIsDesktop();
   const { dark, toggle: toggleTheme } = useTheme();
+  const [amountsVisible, setAmountsVisible] = useState(true); // the wallet's eye button
 
   // Two round buttons like the design: the bell (with an orange dot when
   // something renews this week) opens Settings, where reminders, the dollar
@@ -117,12 +119,14 @@ export function Home() {
         {/* Wallet with the totals, and the ₹ budget meter under it */}
         <div className="flex flex-col gap-4">
           <HomeWallet
+            visible={amountsVisible}
+            onVisibleChange={setAmountsVisible}
             monthly={{ inr: toNum(s.monthly), usd: toNum(usdTotals.monthly) }}
             halfYearly={{ inr: toNum(s.half_yearly), usd: toNum(usdTotals.half_yearly) }}
             yearly={{ inr: toNum(s.yearly), usd: toNum(usdTotals.yearly) }}
             cards={walletCards}
           />
-          <BudgetMeter budget={s.budget} hasUsd={!!s.usd} />
+          <BudgetMeter budget={s.budget} hasUsd={!!s.usd} hidden={!amountsVisible} />
         </div>
 
         {/* Upcoming renewals */}

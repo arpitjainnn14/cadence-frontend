@@ -1,18 +1,26 @@
 // From easyui by Suraj Maurya (MIT): https://github.com/Surajmaurya1/easyui
 // Copied as published (what `npx shadcn add Surajmaurya1/easyui/...` installs).
-// Changes: `motion.*` -> `m.*` so it runs under <LazyMotion> (see src/ui/MotionProvider.tsx),
-// and an optional `total` prop (Cadence shows the whole monthly spend, not just the 3 cards).
+// Cadence changes:
+// - `motion.*` -> `m.*` so it runs under <LazyMotion> (see src/ui/MotionProvider.tsx)
+// - an optional `total` prop (the whole monthly spend, not just the 3 cards)
+// - a richer pouch: leather grain, stitched seam (groove + thread), a lit
+//   pocket lip that casts a shadow onto the cards, deeper layered shadow,
+//   debossed total
+// - more motion: cards rise out of the pouch on first show, lift on hover and
+//   press, tuck in with a little bounce while the pouch squishes, and amounts
+//   count up when revealed. All of it is skipped with "reduce motion".
 "use client";
 
 import {
   type ReactNode,
+  useEffect,
   useId,
   useLayoutEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
-import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { AnimatePresence, animate, m, useMotionValue, useReducedMotion, useTransform } from "framer-motion";
 
 /* -------------------------------------------------------------------------- */
 /*  Wallet Balance — cards tucked in a pouch, tap the eye to reveal / hide      */
@@ -68,6 +76,22 @@ const visibleTop = (i: number) => 13 + i * 49.5; // fanned out
 const hiddenTop = (i: number) => 75 + i * 35; // tucked into the pouch
 
 const EASE_OUT = [0.23, 1, 0.32, 1] as const;
+
+const BACK_PATH = "M20 112C20 102 28 96 38 96H302C312 96 320 102 320 112V316A66 66 0 0 1 254 382H86A66 66 0 0 1 20 316Z";
+const FRONT_PATH = `M30 198C30 188 41 ${POCKET_TOP} 54 ${POCKET_TOP}L286 ${POCKET_TOP}C299 ${POCKET_TOP + 1} 310 188 310 198V322A56 56 0 0 1 254 378H86A56 56 0 0 1 30 322Z`;
+const STITCH_PATH = "M38 199C38 192 46 187 56 187L284 187C294 187 302 192 302 199V322A48 48 0 0 1 254 370H86A48 48 0 0 1 38 322Z";
+// Pressed-into-leather look for the total.
+const DEBOSS = "0 -1px 0 rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.06)";
+
+/** Fine fractal noise used as a leather grain (blended over the pouch). */
+function GrainFilter({ id }: { id: string }) {
+  return (
+    <filter id={id} x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves={2} seed={7} stitchTiles="stitch" />
+      <feColorMatrix type="saturate" values="0" />
+    </filter>
+  );
+}
 const MONO = 'var(--font-mono, "JetBrains Mono", ui-monospace, "SF Mono", "Space Mono", Menlo, Consolas, monospace)';
 const MASK = "******";
 
@@ -121,7 +145,7 @@ function Swap({
   maskClassName = "",
 }: {
   show: boolean;
-  value: string;
+  value: ReactNode;
   mask?: string;
   className?: string;
   maskClassName?: string;
@@ -143,6 +167,20 @@ function Swap({
       </AnimatePresence>
     </span>
   );
+}
+
+// Counts from 0 up to the value when it appears (e.g. on reveal), then
+// animates between values. Renders the final number straight away with
+// "reduce motion".
+function CountUp({ value, format }: { value: number; format: (n: number) => string }) {
+  const reduce = useReducedMotion();
+  const mv = useMotionValue(reduce ? value : 0);
+  const text = useTransform(mv, (v) => format(Math.round(v)));
+  useEffect(() => {
+    const c = animate(mv, value, { duration: reduce ? 0 : 0.9, ease: EASE_OUT });
+    return () => c.stop();
+  }, [value, mv, reduce]);
+  return <m.span>{text}</m.span>;
 }
 
 function EyeIcon({ open }: { open: boolean }) {
@@ -232,8 +270,20 @@ export function WalletBalance({
     return () => ro.disconnect();
   }, []);
 
+  // First show: cards rise out of the pouch one after another. After that,
+  // toggles use a quick stagger; tucking in has a touch more bounce.
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+  }, []);
   const spring = (delay: number) =>
-    reduce ? { duration: 0 } : ({ type: "spring", duration: 0.5, bounce: 0.16, delay } as const);
+    reduce
+      ? { duration: 0 }
+      : ({ type: "spring", duration: isVisible ? 0.6 : 0.55, bounce: isVisible ? 0.24 : 0.36, delay } as const);
+  // The pouch "receives" the cards: a small squash when they tuck in.
+  const squish = reduce
+    ? undefined
+    : { scaleY: [1, 0.968, 1.008, 1], transition: { duration: 0.5, delay: isVisible ? 0 : 0.12, ease: EASE_OUT } };
 
   return (
     <div
@@ -257,25 +307,43 @@ export function WalletBalance({
         }}
       >
         {/* Back of the pouch */}
-        <svg
+        <m.svg
+          key={isVisible ? "back-open" : "back-closed"}
           viewBox={`0 0 ${STAGE_W} ${STAGE_H}`}
           width={STAGE_W}
           height={STAGE_H}
           className="absolute inset-0"
-          style={{ filter: "drop-shadow(0 22px 26px rgba(31,48,22,0.26))" }}
+          style={{
+            filter: "drop-shadow(0 26px 30px rgba(20,30,14,0.34)) drop-shadow(0 6px 10px rgba(0,0,0,0.16))",
+            transformOrigin: "50% 100%",
+          }}
+          animate={mounted.current ? squish : undefined}
           aria-hidden
         >
           <defs>
             <linearGradient id={`${uid}-back`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#35472b" />
-              <stop offset="100%" stopColor="#2b3a22" />
+              <stop offset="0%" stopColor="#3b4f30" />
+              <stop offset="55%" stopColor="#2f4026" />
+              <stop offset="100%" stopColor="#26341e" />
             </linearGradient>
+            {/* Where the cards slide in, the inside of the pouch is darker. */}
+            <linearGradient id={`${uid}-depth`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="rgba(0,0,0,0.38)" />
+              <stop offset="100%" stopColor="rgba(0,0,0,0)" />
+            </linearGradient>
+            <clipPath id={`${uid}-back-clip`}>
+              <path d={BACK_PATH} />
+            </clipPath>
+            <GrainFilter id={`${uid}-grain-back`} />
           </defs>
-          <path
-            d="M20 112C20 102 28 96 38 96H302C312 96 320 102 320 112V316A66 66 0 0 1 254 382H86A66 66 0 0 1 20 316Z"
-            fill={`url(#${uid}-back)`}
-          />
-        </svg>
+          <path d={BACK_PATH} fill={`url(#${uid}-back)`} />
+          <g clipPath={`url(#${uid}-back-clip)`}>
+            <rect x="0" y="0" width={STAGE_W} height={STAGE_H} filter={`url(#${uid}-grain-back)`} opacity={0.22} style={{ mixBlendMode: "overlay" }} />
+            <rect x="20" y="96" width="300" height="70" fill={`url(#${uid}-depth)`} />
+          </g>
+          {/* rim highlight */}
+          <path d={BACK_PATH} fill="none" stroke="rgba(255,255,255,0.07)" />
+        </m.svg>
 
         {/* Cards */}
         {list.map((a, i) => {
@@ -284,7 +352,7 @@ export function WalletBalance({
           return (
             <m.div
               key={a.id}
-              className="absolute overflow-hidden rounded-[18px] will-change-transform"
+              className="absolute will-change-transform"
               style={{
                 left: CARD_LEFT,
                 top: 0,
@@ -292,17 +360,26 @@ export function WalletBalance({
                 height: CARD_H,
                 zIndex: i + 1,
                 transformOrigin: "50% 0%",
-                background: `linear-gradient(180deg, rgba(255,255,255,0.28), rgba(255,255,255,0) 45%), ${a.background}`,
-                boxShadow:
-                  "inset 0 1px 0 rgba(255,255,255,0.65), 0 -1px 0 rgba(0,0,0,0.04), 0 6px 14px rgba(0,0,0,0.10)",
               }}
-              initial={false}
+              initial={reduce ? false : { y: hiddenTop(i) + 40, scale: HIDE_SCALE }}
               animate={{
                 y: isVisible ? visibleTop(i) : hiddenTop(i),
                 scale: isVisible ? 1 : HIDE_SCALE,
               }}
-              transition={spring(delay)}
+              transition={spring(mounted.current ? delay : 0.15 + i * 0.08)}
             >
+              {/* Inner layer lifts on hover/press, independent of the tuck animation above. */}
+              <m.div
+                className="h-full w-full overflow-hidden rounded-[18px]"
+                style={{
+                  background: `linear-gradient(180deg, rgba(255,255,255,0.28), rgba(255,255,255,0) 45%), ${a.background}`,
+                  boxShadow:
+                    "inset 0 1px 0 rgba(255,255,255,0.65), 0 -1px 0 rgba(0,0,0,0.04), 0 6px 14px rgba(0,0,0,0.10)",
+                }}
+                whileHover={reduce || !isVisible ? undefined : { y: -8 }}
+                whileTap={reduce ? undefined : { scale: 0.985 }}
+                transition={{ type: "spring", stiffness: 380, damping: 26, mass: 0.6 }}
+              >
               <div className="flex h-[40px] items-center justify-between px-[16px]">
                 <span aria-label={a.name} className="flex items-center">
                   {a.logo}
@@ -311,54 +388,75 @@ export function WalletBalance({
                   className="text-[15px] font-medium tabular-nums tracking-[0.05em]"
                   style={{ fontFamily: MONO, color: a.amountColor ?? "rgba(0,0,0,0.45)" }}
                 >
-                  <Swap show={isVisible} value={money.format(a.balance)} />
+                  <Swap show={isVisible} value={<CountUp value={a.balance} format={(n) => money.format(n)} />} />
                 </span>
               </div>
+              </m.div>
             </m.div>
           );
         })}
 
         {/* Front pocket */}
-        <svg
+        <m.svg
+          key={isVisible ? "front-open" : "front-closed"}
           viewBox={`0 0 ${STAGE_W} ${STAGE_H}`}
           width={STAGE_W}
           height={STAGE_H}
           className="pointer-events-none absolute inset-0"
-          style={{ zIndex: 10 }}
+          // The pocket's lip casts a soft shadow up onto the cards.
+          style={{ zIndex: 10, filter: "drop-shadow(0 -6px 10px rgba(0,0,0,0.22))", transformOrigin: "50% 100%" }}
+          animate={mounted.current ? squish : undefined}
           aria-hidden
         >
           <defs>
             <linearGradient id={`${uid}-front`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#273921" />
-              <stop offset="100%" stopColor="#202e1a" />
+              <stop offset="0%" stopColor="#2c4025" />
+              <stop offset="50%" stopColor="#23331d" />
+              <stop offset="100%" stopColor="#1c2917" />
             </linearGradient>
+            <clipPath id={`${uid}-front-clip`}>
+              <path d={FRONT_PATH} />
+            </clipPath>
+            <GrainFilter id={`${uid}-grain-front`} />
           </defs>
+          <path d={FRONT_PATH} fill={`url(#${uid}-front)`} stroke="rgba(255,255,255,0.05)" />
+          <g clipPath={`url(#${uid}-front-clip)`}>
+            <rect x="0" y="0" width={STAGE_W} height={STAGE_H} filter={`url(#${uid}-grain-front)`} opacity={0.24} style={{ mixBlendMode: "overlay" }} />
+          </g>
+          {/* lit lip along the top edge of the pocket */}
           <path
-            d={`M30 198C30 188 41 ${POCKET_TOP} 54 ${POCKET_TOP}L286 ${POCKET_TOP}C299 ${POCKET_TOP + 1} 310 188 310 198V322A56 56 0 0 1 254 378H86A56 56 0 0 1 30 322Z`}
-            fill={`url(#${uid}-front)`}
-            stroke="rgba(255,255,255,0.05)"
-          />
-          <path
-            d="M38 199C38 192 46 187 56 187L284 187C294 187 302 192 302 199V322A48 48 0 0 1 254 370H86A48 48 0 0 1 38 322Z"
+            d={`M30 198C30 188 41 ${POCKET_TOP} 54 ${POCKET_TOP}L286 ${POCKET_TOP}C299 ${POCKET_TOP + 1} 310 188 310 198`}
             fill="none"
-            stroke="rgba(170,196,146,0.55)"
-            strokeWidth={1}
+            stroke="rgba(255,255,255,0.16)"
+            strokeWidth={1.5}
+          />
+          {/* stitched seam: a dark groove with a light thread on top */}
+          <path d={STITCH_PATH} fill="none" stroke="rgba(0,0,0,0.45)" strokeWidth={1.8} transform="translate(0 0.8)" />
+          <path
+            d={STITCH_PATH}
+            fill="none"
+            stroke="rgba(196,214,170,0.72)"
+            strokeWidth={1.1}
             strokeDasharray="4 3.2"
             strokeLinecap="round"
           />
-        </svg>
+        </m.svg>
 
         {/* Total + toggle (above the pocket) */}
         <div className="absolute inset-x-0 text-center" style={{ top: 191, zIndex: 11 }}>
           <div className="flex h-[36px] items-center justify-center">
-            <Swap
-              show={isVisible}
-              value={plain.format(total)}
-              className="text-[28px] font-medium tabular-nums tracking-[0.1em] text-[#e0e6d8]"
-              maskClassName="text-[26px] font-medium tracking-[0.34em] text-[#a2aa98]"
-            />
+            <span style={{ textShadow: DEBOSS }}>
+              <Swap
+                show={isVisible}
+                value={<CountUp value={total} format={(n) => plain.format(n)} />}
+                className="text-[28px] font-medium tabular-nums tracking-[0.1em] text-[#e0e6d8]"
+                maskClassName="text-[26px] font-medium tracking-[0.34em] text-[#a2aa98]"
+              />
+            </span>
           </div>
-          <p className="mt-[2px] text-[15px] tracking-[0.01em] text-[#8c9b83]">{totalLabel}</p>
+          <p className="mt-[2px] text-[15px] tracking-[0.01em] text-[#8c9b83]" style={{ textShadow: DEBOSS }}>
+            {totalLabel}
+          </p>
         </div>
 
         <button

@@ -5,7 +5,8 @@ import { Link } from "react-router";
 import type { Budget } from "../api/types";
 import { groupINR, toNum } from "../lib/format";
 
-export function BudgetMeter({ budget, hasUsd }: { budget: Budget | null; hasUsd: boolean }) {
+export function BudgetMeter({ budget, hasUsd, hidden = false }: { budget: Budget | null; hasUsd: boolean; hidden?: boolean }) {
+  const amt = (text: string) => (hidden ? "••••" : text);
   if (!budget) {
     return (
       <Link to="/settings" className="self-center text-[13px] text-fg2 no-underline hover:text-fg">
@@ -49,10 +50,10 @@ export function BudgetMeter({ budget, hasUsd }: { budget: Budget | null; hasUsd:
       </div>
       <div className="flex items-baseline justify-between gap-3 text-[13px]">
         <span className="text-fg2 tabular-nums">
-          ₹{groupINR(used)} of ₹{groupINR(total)}
+          {amt(`₹${groupINR(used)}`)} of {amt(`₹${groupINR(total)}`)}
         </span>
         <span className={`tabular-nums ${budget.over ? "font-semibold text-warn" : "text-fg2"}`}>
-          {budget.over ? `₹${groupINR(-remaining)} over budget` : `₹${groupINR(remaining)} left`}
+          {budget.over ? `${amt(`₹${groupINR(-remaining)}`)} over budget` : `${amt(`₹${groupINR(remaining)}`)} left`}
         </span>
       </div>
       {hasUsd && <span className="text-[12px] text-fg3">$ subscriptions aren't counted.</span>}
