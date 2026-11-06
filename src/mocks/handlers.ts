@@ -8,7 +8,7 @@ import { delay, http, HttpResponse } from "msw";
 import { CATEGORIES, type Category, type Insights, type Subscription, type SubscriptionIn, type Summary } from "../api/types";
 import { readCookie } from "../api/client";
 import { daysUntil } from "../lib/format";
-import { allSubs, db, uuid, withComputed } from "./db";
+import { allSubs, db, displayName, uuid, withComputed } from "./db";
 import { BRANDS } from "../lib/brands";
 
 const ACCESS_MS = 15 * 60 * 1000;
@@ -72,6 +72,8 @@ export const handlers = [
   // ---------- auth ----------
   http.post("/api/auth/login", async ({ request }) => {
     const { email, password } = (await request.json()) as { email?: string; password?: string };
+    // Test passwords: "wrong" -> 401, "limit" -> 429 (rate limited, as after 5 failures).
+    if (password === "limit") return err(429, "Too many attempts. Try again later.");
     if (!email || !password || password === "wrong") return err(401, "Invalid email or password");
     setCookie("csrf_token", uuid(), 30 * 86400);
     accessValidUntil = Date.now() + ACCESS_MS;
@@ -115,7 +117,7 @@ export const handlers = [
       bank,
       name,
       network: ((form.get("network") as string) || null) as "visa" | null,
-      display_name: bank && bank !== name ? `${bank} ${name}` : name,
+      display_name: displayName(bank, name),
       has_image: image instanceof File && image.size > 0,
       is_active: true,
       color,
@@ -130,7 +132,7 @@ export const handlers = [
     const item = pmById(params.id as string);
     if (!item) return err(404, "Not found");
     Object.assign(item, await request.json());
-    item.display_name = item.bank && item.bank !== item.name ? `${item.bank} ${item.name}` : item.name;
+    item.display_name = displayName(item.bank, item.name);
     return HttpResponse.json(item);
   }),
   http.put("/api/payment-methods/:id/image", async ({ request, params }) => {

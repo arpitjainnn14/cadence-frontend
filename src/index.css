@@ -80,6 +80,20 @@
     from { opacity: 0; filter: blur(4px); }
     to { opacity: 1; filter: blur(0); }
   }
+  /* Login screen */
+  @keyframes logoIn {
+    from { opacity: 0; transform: scale(0.8); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes shake {
+    10%, 90% { transform: translateX(-1px); }
+    20%, 80% { transform: translateX(3px); }
+    30%, 50%, 70% { transform: translateX(-6px); }
+    40%, 60% { transform: translateX(6px); }
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
   @keyframes shrink {
     from { transform: scaleX(1); }
     to { transform: scaleX(0); }
@@ -194,4 +208,17 @@
 /* iPhone safe areas (notch / home indicator). */
 @utility pt-safe {
   padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Respect "Reduce Motion" (iOS Settings > Accessibility > Motion): keep the
+   end states, drop the movement. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

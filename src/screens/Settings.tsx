@@ -10,6 +10,7 @@ import { Segmented } from "../components/Segmented";
 import { setTheme, useTheme, type Theme } from "../ui/theme";
 import { useUi } from "../ui/UiContext";
 import { APP_NAME } from "../brand";
+import { MadeBy } from "../components/MadeBy";
 
 export function Settings() {
   return (
@@ -18,6 +19,7 @@ export function Settings() {
       <AppearanceSection />
       <NotificationsSection />
       <AccountSection />
+      <MadeBy className="pt-4" />
     </div>
   );
 }
@@ -127,8 +129,7 @@ function AccountSection() {
         <span className="min-w-0 flex-1 truncate text-[15px]">{me.data?.email}</span>
         <button
           type="button"
-          onClick={() => logout.mutate()}
-          disabled={logout.isPending}
+          onClick={logout}
           className={`${pill} flex items-center gap-1.5 bg-s2 text-fg`}
         >
           <LogoutIcon size={15} />

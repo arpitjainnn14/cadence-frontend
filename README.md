@@ -13,7 +13,7 @@ npm test           # vitest
 npm run build      # type-check + production build into dist/
 ```
 
-In dev, the app talks to a **mock API** running in the browser (MSW), so no backend is needed. Any email and password signs you in, except the password `wrong`, which shows the error state. The mock data resets on every reload.
+In dev, the app talks to a **mock API** running in the browser (MSW), so no backend is needed. Any email and password signs you in, except the password `wrong` (shows the wrong-password state) and `limit` (shows the 15-minute rate-limit countdown). The mock data resets on every reload.
 
 To use the real backend instead:
 
