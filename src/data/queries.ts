@@ -5,6 +5,7 @@ import { AuthError } from "../api/client";
 import { api } from "../api/endpoints";
 import type { PaymentMethod, Period, Subscription, SubscriptionIn } from "../api/types";
 import { paymentLabels } from "../lib/cardStyle";
+import { signOut } from "./signOut";
 
 export const keys = {
   me: ["me"] as const,
@@ -131,13 +132,8 @@ export function useLogin() {
   });
 }
 
-export function useLogout() {
+/** Returns a function that signs out immediately (see signOut.ts). */
+export function useLogout(): () => void {
   const qc = useQueryClient();
-  return useMutation({
-    mutationFn: () => api.logout().catch(() => undefined),
-    onSettled: () => {
-      qc.clear();
-      qc.setQueryData(keys.me, null);
-    },
-  });
+  return () => signOut(qc, api.logout);
 }

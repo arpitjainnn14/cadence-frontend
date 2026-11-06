@@ -226,7 +226,7 @@ function Sidebar() {
           type="button"
           title="Sign out"
           aria-label="Sign out"
-          onClick={() => logout.mutate()}
+          onClick={logout}
           className="grid h-8 w-8 place-items-center rounded-lg border-none bg-transparent text-fg3 hover:text-fg2"
         >
           <LogoutIcon size={17} />
