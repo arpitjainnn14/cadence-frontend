@@ -7,8 +7,8 @@
 import { delay, http, HttpResponse } from "msw";
 import { CATEGORIES, type Category, type Insights, type Subscription, type SubscriptionIn, type Summary } from "../api/types";
 import { readCookie } from "../api/client";
-import { daysUntil } from "../lib/format";
-import { allSubs, db, displayName, uuid, withComputed } from "./db";
+import { daysUntil, toIso, today } from "../lib/format";
+import { allSubs, db, displayName, uuid, withComputed, type StoredSub } from "./db";
 import { BRANDS } from "../lib/brands";
 
 const ACCESS_MS = 15 * 60 * 1000;
@@ -30,8 +30,14 @@ function guard(request: Request): Response | null {
   return null;
 }
 
-function validate(body: Partial<SubscriptionIn>): Response | null {
+function validate(body: Partial<SubscriptionIn>, creating: boolean): Response | null {
   const errors: { loc: string[]; msg: string }[] = [];
+  const todayIso = toIso(today());
+  // Dates (change set 7): next_billing_date required on POST and never in the
+  // past; started_on optional and never in the future.
+  if (creating && !body.next_billing_date) errors.push({ loc: ["body", "next_billing_date"], msg: "Field required" });
+  if (body.next_billing_date && body.next_billing_date < todayIso) return err(422, "Next billing date can't be in the past");
+  if (body.started_on && body.started_on > todayIso) return err(422, "Started on can't be in the future");
   const name = (body.merchant_name ?? "").trim();
   if (name.length < 1 || name.length > 80) errors.push({ loc: ["body", "merchant_name"], msg: "must be 1–80 characters" });
   if (!(Number(body.amount) > 0)) errors.push({ loc: ["body", "amount"], msg: "must be greater than 0" });
@@ -61,6 +67,19 @@ function decorate(s: Subscription): Subscription {
 }
 
 const subsOut = () => allSubs().map(decorate);
+
+/** summary.budget: ₹ only; null when no budget is set. */
+function budgetFor(usedInr: number) {
+  if (db.monthlyBudget === null) return null;
+  const monthly = Number(db.monthlyBudget);
+  return {
+    monthly: monthly.toFixed(2),
+    used: usedInr.toFixed(2),
+    remaining: (monthly - usedInr).toFixed(2),
+    percent_used: Math.round((usedInr / monthly) * 100),
+    over: usedInr > monthly,
+  };
+}
 const pmById = (id: string | null | undefined) => db.paymentMethods.find((p) => p.id === id) ?? null;
 
 export const handlers = [
@@ -188,10 +207,13 @@ export const handlers = [
     const g = guard(request);
     if (g) return g;
     const body = (await request.json()) as SubscriptionIn;
-    const v = validate(body);
+    const v = validate(body, true);
     if (v) return v;
-    const row = {
-      ...body,
+    const { next_billing_date, ...rest } = body;
+    const row: StoredSub = {
+      ...rest,
+      started_on: body.started_on ?? null,
+      anchor: next_billing_date!,
       id: uuid(),
       cancelled_at: body.status === "cancelled" ? new Date().toISOString().slice(0, 10) : null,
       created_at: new Date().toISOString(),
@@ -211,12 +233,22 @@ export const handlers = [
     const i = db.subscriptions.findIndex((x) => x.id === params.id);
     if (i < 0) return err(404, "Not found");
     const body = (await request.json()) as SubscriptionIn;
-    const v = validate(body);
+    const v = validate(body, false);
     if (v) return v;
     const prev = db.subscriptions[i];
     const cancelled_at =
       body.status === "cancelled" ? (prev.cancelled_at ?? new Date().toISOString().slice(0, 10)) : null;
-    db.subscriptions[i] = { ...body, id: prev.id, cancelled_at, created_at: prev.created_at };
+    // Full replace, except: no next_billing_date keeps the stored anchor, and a
+    // missing started_on clears it (so the client always sends it).
+    const { next_billing_date, ...rest } = body;
+    db.subscriptions[i] = {
+      ...rest,
+      started_on: body.started_on ?? null,
+      anchor: next_billing_date || prev.anchor,
+      id: prev.id,
+      cancelled_at,
+      created_at: prev.created_at,
+    };
     return HttpResponse.json(decorate(withComputed(db.subscriptions[i])));
   }),
   http.delete("/api/subscriptions/:id", ({ request, params }) => {
@@ -244,6 +276,7 @@ export const handlers = [
       usd: hasUsd
         ? { monthly: (usdYear / 12).toFixed(2), half_yearly: (usdYear / 2).toFixed(2), yearly: usdYear.toFixed(2) }
         : null,
+      budget: budgetFor(inrYear / 12),
       upcoming: active
         .slice()
         .sort((a, b) => a.next_renewal.localeCompare(b.next_renewal))
@@ -298,6 +331,36 @@ export const handlers = [
         .map((s) => ({ subscription_id: s.id, merchant_name: s.merchant_name, yearly_amount: s.yearly_amount })),
     };
     return HttpResponse.json(body);
+  }),
+
+  // ---------- settings (monthly budget) ----------
+  http.get("/api/settings", ({ request }) => guard(request) ?? HttpResponse.json({ monthly_budget_inr: db.monthlyBudget })),
+  http.put("/api/settings", async ({ request }) => {
+    const g = guard(request);
+    if (g) return g;
+    const { monthly_budget_inr } = (await request.json()) as { monthly_budget_inr: string | null };
+    if (monthly_budget_inr !== null) {
+      const n = Number(monthly_budget_inr);
+      if (!(n > 0) || n > 10_000_000 || !/^\d+(\.\d{1,2})?$/.test(String(monthly_budget_inr)))
+        return err(422, [{ loc: ["body", "monthly_budget_inr"], msg: "must be more than 0, at most 1,00,00,000, with up to 2 decimals" }]);
+    }
+    db.monthlyBudget = monthly_budget_inr === null ? null : Number(monthly_budget_inr).toFixed(2);
+    return HttpResponse.json({ monthly_budget_inr: db.monthlyBudget });
+  }),
+
+  // ---------- change password ----------
+  // Test values: current "wrong" -> 400, current "limit" -> 429, new == current -> 422.
+  http.post("/api/auth/change-password", async ({ request }) => {
+    const g = guard(request);
+    if (g) return g;
+    const { current_password, new_password } = (await request.json()) as { current_password: string; new_password: string };
+    if (current_password === "limit") return err(429, "Too many attempts. Try again later.");
+    if (current_password === "wrong") return err(400, "Current password is incorrect");
+    if ((new_password ?? "").length < 8) return err(422, [{ loc: ["body", "new_password"], msg: "String should have at least 8 characters" }]);
+    if (new_password === current_password) return err(422, "New password must be different");
+    setCookie("csrf_token", uuid(), 30 * 86400); // new cookies for this device
+    accessValidUntil = Date.now() + ACCESS_MS;
+    return HttpResponse.json({ email: sessionEmail });
   }),
 
   // ---------- push ----------

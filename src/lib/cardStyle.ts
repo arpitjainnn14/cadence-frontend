@@ -42,6 +42,8 @@ const PRESETS: Record<string, Preset> = {
   "google pay": { mark: "G", tile: "#FFFFFF", tileFg: "#1A73E8", fg: "#1f1f1f", bg: "linear-gradient(135deg,#ffffff 0%,#e9ecf1 100%)" },
   phonepe: { mark: "Pe", tile: "#5F259F", tileFg: "#fff", bg: "linear-gradient(135deg,#7b3fd1 0%,#4d1a91 100%)" },
   paytm: { mark: "P", tile: "#00B9F1", tileFg: "#fff", bg: "linear-gradient(135deg,#00b9f1 0%,#0b3d8c 100%)" },
+  "cred upi": { mark: "C", tile: "#1A1A1A", tileFg: "#fff", bg: "linear-gradient(135deg,#3a3a3a 0%,#0d0d0d 100%)" },
+  "slice upi": { mark: "s", tile: "#6024D0", tileFg: "#fff", bg: "linear-gradient(135deg,#9a5cff 0%,#4a1aa8 100%)" },
 };
 
 // The backend stores short bank names ("HDFC"); the card art shows the full

@@ -10,6 +10,16 @@ export const CATEGORY_COLOR: Record<Category, string> = {
   "Cloud storage": "#7FB5B0",
   Shopping: "#C7B77F",
   News: "#C4A3BF",
+  // Added with the nine new categories; same muted family, spread across the hue wheel.
+  Gaming: "#E0916B",
+  Education: "#6E9BD6",
+  Productivity: "#6FB89A",
+  Telecom: "#B7A6E0",
+  Utilities: "#A3A38A",
+  Health: "#D97C8E",
+  Travel: "#5DB7C9",
+  Finance: "#D4B35E",
+  Insurance: "#A0897A",
   Other: "#8E8E8B",
 };
 

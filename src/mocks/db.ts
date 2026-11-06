@@ -49,18 +49,32 @@ export const db = {
     pm("upi", null, "GPay", null),
     pm("upi", null, "PhonePe", null),
     pm("upi", null, "Paytm", null),
+    pm("upi", null, "CRED UPI", null),
+    pm("upi", null, "slice UPI", null),
   ],
-  // Stored as the client sent them; computed fields are added by `withComputed`.
-  subscriptions: [] as (SubscriptionIn & { id: string; cancelled_at: string | null; created_at: string })[],
+  // Stored like the backend: `anchor` is the billing anchor set from
+  // next_billing_date (renewals are derived from it); computed fields are
+  // added by `withComputed`.
+  subscriptions: [] as StoredSub[],
+  /** Settings: monthly budget in ₹ (string) or null. */
+  monthlyBudget: "3000.00" as string | null,
+};
+
+export type StoredSub = Omit<SubscriptionIn, "next_billing_date"> & {
+  id: string;
+  anchor: string;
+  cancelled_at: string | null;
+  created_at: string;
 };
 
 const pmId = (display: string, network?: string) =>
   db.paymentMethods.find((p) => p.display_name === display && (!network || p.network === network))!.id;
 
-/** A start date that is a few cycles before a renewal `inDays` from now. */
-function startFor(inDays: number, cycle: BillingCycle): string {
-  const next = new Date(today().getTime() + inDays * 86_400_000);
-  return toIso(addMonths(next, -CYCLES[cycle].months * 6));
+const daysFromNow = (n: number) => toIso(new Date(today().getTime() + n * 86_400_000));
+
+/** When it started: a few cycles before the next renewal (some subs leave it unset). */
+function startedFor(inDays: number, cycle: BillingCycle): string {
+  return toIso(addMonths(new Date(today().getTime() + inDays * 86_400_000), -CYCLES[cycle].months * 6));
 }
 
 const seed = (
@@ -81,7 +95,8 @@ const seed = (
   amount,
   currency,
   billing_cycle,
-  start_date: startFor(inDays, billing_cycle),
+  anchor: daysFromNow(inDays),
+  started_on: merchant_name === "Zomato Gold" ? null : startedFor(inDays, billing_cycle),
   payment_method_id: pmId(payment, network),
   category,
   notes,
@@ -112,9 +127,10 @@ db.subscriptions = [
 export function withComputed(s: (typeof db.subscriptions)[number]): Subscription {
   const yearly = (Number(s.amount) * 12) / CYCLES[s.billing_cycle].months;
   const isInr = s.currency === "INR";
+  const { anchor: _anchor, ...out } = s;
   return {
-    ...s,
-    next_renewal: nextRenewal(s.start_date, s.billing_cycle, today()),
+    ...out,
+    next_renewal: nextRenewal(s.anchor, s.billing_cycle, today()),
     logo_url: null,
     yearly_amount: yearly.toFixed(2),
     amount_inr: isInr ? Number(s.amount).toFixed(2) : null,

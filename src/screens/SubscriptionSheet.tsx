@@ -22,7 +22,8 @@ import { useDeleteSubscription, usePaymentLabels, usePaymentMethods, useSaveSubs
 import { exactBrand, findBrand, suggestBrands } from "../lib/brands";
 import { NETWORK_LABEL, cardLook } from "../lib/cardStyle";
 import { CATEGORY_COLOR } from "../lib/categories";
-import { CYCLES, CYCLE_KEYS, nextRenewal } from "../lib/cycles";
+import { CYCLES, CYCLE_KEYS } from "../lib/cycles";
+import { dateErrors, datePayload } from "../lib/subscriptionDates";
 import { groupINR, toIso, today, toNum } from "../lib/format";
 import { usdText } from "../lib/money";
 import { useUi } from "../ui/UiContext";
@@ -38,10 +39,10 @@ interface FormState {
   amount: string;
   currency: Currency;
   cycle: BillingCycle;
-  /** "Started": the date renewals are anchored on (start_date). */
-  start: string;
-  /** Set only when the user edits "Next renewal" directly; otherwise it's derived from `start`. */
-  nextOverride: string | null;
+  /** "Next billing date": required, today or later (see lib/subscriptionDates.ts). */
+  next: string;
+  /** "Started on": optional, today or earlier; "" when unknown. */
+  startedOn: string;
   /** `undefined` = not chosen yet on a new subscription → default to the first card (as in the design). */
   paymentId: string | null | undefined;
   category: Category;
@@ -58,12 +59,9 @@ function initialForm(editing?: Subscription, preset?: Partial<SubscriptionIn>): 
     amount: src.amount ? String(toNum(src.amount)) : "",
     currency: src.currency ?? "INR",
     cycle: src.billing_cycle ?? "monthly",
-    // Always start from the saved start_date, never next_renewal: renewals are
-    // anchored on start_date's day of the month. If a sub started on Jan 31,
-    // next_renewal can be Feb 28, and saving that back would move every later
-    // renewal to the 28th. Untouched, we send the original start_date back.
-    start: src.start_date ?? toIso(today()),
-    nextOverride: null,
+    // On edit, pre-fill from next_renewal. It's only sent back if changed.
+    next: editing?.next_renewal ?? preset?.next_billing_date ?? "",
+    startedOn: src.started_on ?? "",
     paymentId: editing ? (editing.payment_method_id ?? null) : preset?.payment_method_id,
     category: src.category ?? "Streaming",
     categoryTouched: !!editing || !!preset?.category,
@@ -127,11 +125,8 @@ export function SubscriptionSheet({ editing, preset }: Props) {
   const nameOk = f.name.trim().length > 0 && f.name.trim().length <= 80;
   const amountOk = amount > 0;
   const notesOk = f.notes.length <= 500;
-  // The two date fields: "Next renewal" shows what the backend will compute
-  // from "Started", unless you typed a next renewal yourself. Either one is a
-  // real billing date, so whichever you edited last is what we save.
-  const next = f.nextOverride ?? (f.start ? nextRenewal(f.start, f.cycle, today()) : "");
-  const anchor = f.nextOverride ?? f.start;
+  const todayIso = toIso(today());
+  const dateErr = dateErrors({ next: f.next, startedOn: f.startedOn, today: todayIso });
   const paymentId = f.paymentId === undefined ? (pms.find((p) => p.type === "credit_card")?.id ?? null) : f.paymentId;
   const pm = pms.find((p) => p.id === paymentId);
   const suggestions = suggestBrands(f.name);
@@ -144,7 +139,7 @@ export function SubscriptionSheet({ editing, preset }: Props) {
       amount: amount.toFixed(2),
       currency: f.currency,
       billing_cycle: f.cycle,
-      start_date: anchor,
+      ...datePayload({ editing: !!editing, next: f.next, originalNext: editing?.next_renewal ?? null, startedOn: f.startedOn }),
       payment_method_id: paymentId,
       category: f.category,
       notes: f.notes.trim() || null,
@@ -153,7 +148,7 @@ export function SubscriptionSheet({ editing, preset }: Props) {
   }
 
   function onSave() {
-    if (!nameOk || !amountOk || !notesOk || !anchor) return setShowErrors(true);
+    if (!nameOk || !amountOk || !notesOk || dateErr.next || dateErr.startedOn) return setShowErrors(true);
     save.mutate(
       { id: editing?.id, body: body() },
       {
@@ -171,10 +166,10 @@ export function SubscriptionSheet({ editing, preset }: Props) {
         // Undo re-creates it with the same details (it gets a new id).
         // This runs after the sheet has closed, so it calls the API directly
         // instead of using this component's mutation hook.
-        const { id: _id, next_renewal: _n, logo_url: _l, yearly_amount: _ya, amount_inr: _a, yearly_inr: _y, cancelled_at: _c, created_at: _cr, ...again } = editing;
+        const { id: _id, next_renewal, logo_url: _l, yearly_amount: _ya, amount_inr: _a, yearly_inr: _y, cancelled_at: _c, created_at: _cr, ...again } = editing;
         toast(`${editing.merchant_name} deleted`, () => {
           api
-            .createSubscription(again)
+            .createSubscription({ ...again, next_billing_date: next_renewal })
             .then(() => queryClient.invalidateQueries())
             .catch(() => toast(`Couldn't restore ${editing.merchant_name}`));
         });
@@ -275,29 +270,20 @@ export function SubscriptionSheet({ editing, preset }: Props) {
         />
       </div>
 
-      {/* Dates, side by side as in the design */}
-      <div className="grid grid-cols-2 gap-2.5">
-        <label className="flex min-w-0 flex-col gap-2">
-          <FieldLabel>Next renewal</FieldLabel>
-          <input
-            type="date"
-            value={next}
-            onChange={(e) => set({ nextOverride: e.target.value || null })}
-            className="field h-12! w-full min-w-0 px-3! text-[15px]!"
-            style={{ borderColor: border(!!next) }}
-          />
-        </label>
-        <label className="flex min-w-0 flex-col gap-2">
-          <FieldLabel>Started</FieldLabel>
-          <input
-            type="date"
-            value={f.start}
-            onChange={(e) => set({ start: e.target.value, nextOverride: null })}
-            className="field h-12! w-full min-w-0 px-3! text-[15px]!"
-            style={{ borderColor: border(!!f.start) }}
-          />
-        </label>
-      </div>
+      {/* Next billing date: required, can't be in the past. Renewals are worked out from it. */}
+      <label className="flex flex-col gap-2">
+        <FieldLabel>Next billing date</FieldLabel>
+        <input
+          type="date"
+          value={f.next}
+          min={todayIso}
+          required
+          onChange={(e) => set({ next: e.target.value })}
+          className="field h-12! w-full min-w-0 px-3! text-[15px]!"
+          style={{ borderColor: border(!dateErr.next) }}
+        />
+        {showErrors && dateErr.next && <span className="text-[13px] text-warn">{dateErr.next}</span>}
+      </label>
 
       {/* Payment method */}
       <div className="flex flex-col gap-2.5">
@@ -395,6 +381,34 @@ export function SubscriptionSheet({ editing, preset }: Props) {
             { value: "cancelled", label: "Cancelled" },
           ]}
         />
+      </div>
+
+      {/* Optional details */}
+      <div className="flex flex-col gap-3 border-t border-hair pt-5">
+        <span className="text-[13px] font-semibold text-fg2">Optional details</span>
+        <label className="flex flex-col gap-2">
+          <FieldLabel>Started on</FieldLabel>
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={f.startedOn}
+              max={todayIso}
+              onChange={(e) => set({ startedOn: e.target.value })}
+              className="field h-12! w-full min-w-0 flex-1 px-3! text-[15px]!"
+              style={{ borderColor: border(!dateErr.startedOn) }}
+            />
+            {f.startedOn && (
+              <button
+                type="button"
+                onClick={() => set({ startedOn: "" })}
+                className="h-[34px] flex-none rounded-[17px] border-none bg-s2 px-3 text-[13px] text-fg2"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          {showErrors && dateErr.startedOn && <span className="text-[13px] text-warn">{dateErr.startedOn}</span>}
+        </label>
       </div>
 
       {/* Notes */}

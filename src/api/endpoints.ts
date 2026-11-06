@@ -8,6 +8,7 @@ import type {
   Period,
   Subscription,
   SubscriptionIn,
+  Settings,
   Summary,
 } from "./types";
 
@@ -17,6 +18,9 @@ export const api = {
     apiFetch<Me>("/api/auth/login", { method: "POST", json: { email, password } }),
   logout: () => apiFetch<void>("/api/auth/logout", { method: "POST" }),
   me: () => apiFetch<Me>("/api/auth/me"),
+  /** 200 sets new cookies here and signs out other devices; 400 wrong current password; 422 same password; 429 locked. */
+  changePassword: (current_password: string, new_password: string) =>
+    apiFetch<Me>("/api/auth/change-password", { method: "POST", json: { current_password, new_password } }),
 
   // Payment methods
   paymentMethods: (includeInactive = false) =>
@@ -47,6 +51,10 @@ export const api = {
   // Read models
   summary: () => apiFetch<Summary>("/api/summary"),
   insights: (period: Period) => apiFetch<Insights>(`/api/insights?period=${period}`),
+
+  // Settings (monthly budget)
+  settings: () => apiFetch<Settings>("/api/settings"),
+  updateSettings: (body: Settings) => apiFetch<Settings>("/api/settings", { method: "PUT", json: body }),
 
   // Push
   pushPublicKey: () => apiFetch<{ key: string }>("/api/push/public-key"),

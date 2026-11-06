@@ -9,6 +9,7 @@ export type Status = "active" | "paused" | "cancelled";
 export type PaymentType = "credit_card" | "upi" | "other";
 export type Network = "visa" | "mastercard" | "rupay" | null;
 
+/** The backend's fixed list, in its order (change set 7 added nine). */
 export const CATEGORIES = [
   "Streaming",
   "Music",
@@ -18,6 +19,15 @@ export const CATEGORIES = [
   "Food delivery",
   "Shopping",
   "News",
+  "Gaming",
+  "Education",
+  "Productivity",
+  "Telecom",
+  "Utilities",
+  "Health",
+  "Travel",
+  "Finance",
+  "Insurance",
   "Other",
 ] as const;
 export type Category = (typeof CATEGORIES)[number];
@@ -44,21 +54,35 @@ export interface MerchantResolve {
   logo_url: string | null;
 }
 
-export interface SubscriptionIn {
+/** Fields shared by what we send and what we get back. */
+interface SubscriptionFields {
   merchant_name: string;
   merchant_domain?: string | null;
   amount: string;
   currency: Currency;
   billing_cycle: BillingCycle;
-  start_date: string;
   payment_method_id?: string | null;
   category: Category;
   notes?: string | null;
   status: Status;
+  /** When it started; optional, never in the future. */
+  started_on: string | null;
 }
 
-export interface Subscription extends SubscriptionIn {
+/**
+ * Body of POST / PUT /api/subscriptions.
+ * - POST: `next_billing_date` is required and must be today or later.
+ * - PUT (full replace): send `next_billing_date` ONLY if the user changed it
+ *   (omitting it keeps the stored billing anchor), and ALWAYS send
+ *   `started_on` (omitting it clears it).
+ */
+export interface SubscriptionIn extends SubscriptionFields {
+  next_billing_date?: string | null;
+}
+
+export interface Subscription extends SubscriptionFields {
   id: string;
+  /** Computed by the backend; always today or later. */
   next_renewal: string;
   logo_url: string | null;
   /** Yearly cost in the subscription's own currency. */
@@ -89,6 +113,8 @@ export interface Summary {
   yearly: string;
   /** Totals of the $ subscriptions, in $; null when there are none. */
   usd: { monthly: string; half_yearly: string; yearly: string } | null;
+  /** ₹ only ($ isn't counted); null when no budget is set. `remaining` can be negative, `percent_used` over 100. */
+  budget: Budget | null;
   upcoming: UpcomingRenewal[];
 }
 
@@ -105,4 +131,17 @@ export interface Insights {
   }[];
   most_expensive: { subscription_id: string; merchant_name: string; yearly_inr: string }[];
   usd_subscriptions: { subscription_id: string; merchant_name: string; yearly_amount: string }[];
+}
+
+export interface Budget {
+  monthly: string;
+  used: string;
+  remaining: string;
+  percent_used: number;
+  over: boolean;
+}
+
+export interface Settings {
+  /** Monthly budget in ₹, or null when not set. */
+  monthly_budget_inr: string | null;
 }
