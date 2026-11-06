@@ -200,11 +200,18 @@ function DockTabs({ index, onPick }: { index: number; onPick: (i: number) => voi
       {showPill && (
         <div
           aria-hidden
-          // A brighter liquid-glass lens inside the glass dock.
+          // A brighter liquid-glass lens inside the glass dock (without its own blur, see below).
           className="liquid-glass absolute top-0 bottom-0 rounded-[25px]"
           style={
             {
               "--lg-tint": "var(--lg-tint-strong)",
+              // No second blur: the bubble sits on the already-frosted dock, so
+              // its own backdrop blur was nearly invisible but doubled the
+              // per-frame blur work, which made animations elsewhere on the
+              // page (the Home wallet) stutter on iPhone. Tint, sheen, rim and
+              // depth stay.
+              backdropFilter: "none",
+              WebkitBackdropFilter: "none",
               ...(drag
                 ? {
                     left: dragLeft,
